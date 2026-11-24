@@ -1,6 +1,6 @@
 # Atufa Khan — Portfolio
 
-Next.js + Tailwind portfolio with an interactive canvas hero: a cherry blossom tree on a grassy bank by a lake and ocean, fish you can scatter and feed, drifting petals, and a portrait whose eyes (and the cat's) follow your cursor.
+Next.js + Tailwind portfolio told as a voyage, "The Wayfinder": a dark opening, a canoe sailing a living night ocean past seven islands (one per chapter), a storm, and a dive to a gold ring on the seabed.
 
 ## Run locally
 ```bash
@@ -10,7 +10,7 @@ npm run dev
 Open http://localhost:3000
 
 ## Edit content
-All text lives in `lib/data.ts`. The hero scene is `components/PondScene.tsx`.
+All text lives in `lib/data.ts`. Chapter words are in `lib/story.ts`; the scene is `components/voyage/engine.ts`.
 
 ## Deploy
 Push to GitHub and import the repo on vercel.com, or run `npx vercel --prod`.
