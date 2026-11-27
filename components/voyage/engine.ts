@@ -24,11 +24,11 @@ function rng(seed: number) {
 }
 
 const hx = (h: string) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-const mixRGB = (a: string, b: string, t: number) => {
+export const mixRGB = (a: string, b: string, t: number) => {
   const A = hx(a), B = hx(b);
   return [0, 1, 2].map((i) => Math.round(A[i] + (B[i] - A[i]) * t));
 };
-const mix = (a: string, b: string, t: number) => `rgb(${mixRGB(a, b, t).join(",")})`;
+export const mix = (a: string, b: string, t: number) => `rgb(${mixRGB(a, b, t).join(",")})`;
 const mix3 = (day: string, warm: string, night: string, w: number, n: number) => {
   const d = mixRGB(day, warm, w);
   const dh = "#" + d.map((v) => v.toString(16).padStart(2, "0")).join("");
@@ -46,7 +46,7 @@ const SKY: [number, string, string, string][] = [
   [0.92, "#040a18", "#0a1d33", "#1a3a4c"],
   [1.0, "#040a18", "#0a1d33", "#1a3a4c"],
 ];
-function skyAt(tod: number) {
+export function skyAt(tod: number) {
   let i = 0;
   while (i < SKY.length - 2 && tod > SKY[i + 1][0]) i++;
   const a = SKY[i], b = SKY[i + 1];
@@ -132,6 +132,9 @@ export class VoyageEngine {
   ring = { x: 0, y: 0, r: 0, landed: false };
   onActive?: (i: number) => void;
   onLightning?: () => void;
+  anchors: { x: number; y: number; w: number; by: number }[] = [];
+  env = { tod: 0, night: 0, warm: 0 };
+  paused = false;
   audio = { night: 0, storm: 0, under: 0 };
   onFrame?: (p: number) => void;
   private lastActive = -2;
@@ -160,7 +163,7 @@ export class VoyageEngine {
     this.sc = this.mobile ? 0.62 : clamp(this.H / 900, 0.75, 1.25);
     this.spacing = this.W * (this.mobile ? 1.1 : 0.95);
     this.dockX = this.W * (this.mobile ? 0.72 : 0.77);
-    this.canoeX = this.W * (this.mobile ? 0.3 : 0.52);
+    this.canoeX = this.W * (this.mobile ? 0.34 : 0.6);
     this.buildSky();
     this.shapes = chapters.map((c, i) => this.buildIsland(c.kind, i));
     this.snow = Array.from({ length: this.mobile ? 50 : 110 }, () => ({
@@ -664,6 +667,7 @@ export class VoyageEngine {
     g.fill();
     g.restore();
 
+    this.anchors[i] = { x, y: by - hAt(0), w, by };
     // name, once you are close
     const near = sstep(-0.55, 0, -Math.abs(x - this.dockX) / this.W);
     if (near > 0.01) {
@@ -716,11 +720,13 @@ export class VoyageEngine {
     }
   }
 
+
+
   /* ---------------- canoe ---------------- */
   private drawCanoe(moving: number) {
     const g = this.g;
     const t = this.t;
-    const s = this.sc * (this.mobile ? 0.85 : 1);
+    const s = this.sc * (this.mobile ? 1.4 : 2.05);
     const cx = this.canoeX;
     const L = 150 * s;
     // the canoe rides a calm version of the swell (no cursor ripples), filtered so it rocks gently
@@ -1223,6 +1229,10 @@ export class VoyageEngine {
   /* ---------------- main loop ---------------- */
   private frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
+    if (this.paused) {
+      this.last = now;
+      return;
+    }
     const dt = Math.min(2.5, (now - this.last) / 16.67);
     this.last = now;
     this.dtNow = dt;
@@ -1248,6 +1258,7 @@ export class VoyageEngine {
     this.night = sstep(0.76, 0.93, tod);
     const warm = Math.max(Math.exp(-Math.pow(tod / 0.09, 2)), Math.exp(-Math.pow((tod - 0.73) / 0.08, 2))) * (1 - this.night);
     const n = this.night;
+    this.env = { tod, night: n, warm };
     this.lampK = 0.3 + 0.7 * sstep(0.6, 0.85, tod);
     this.layerCols = LAYER_DAY.map((d, j) => [0, 1].map((k) => mix3(d[k], LAYER_WARM[j][k], LAYER_COL[j][k], warm * 0.55, n)));
     const P = (day: string, nightC: string, warmC?: string) => mix3(day, warmC ?? day, nightC, warmC ? warm * 0.5 : 0, n);

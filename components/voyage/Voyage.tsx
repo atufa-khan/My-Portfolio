@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VoyageEngine } from "./engine";
 import { OceanSound } from "./sound";
-import { PANELS } from "./Panels";
+import Jungle from "./Jungle";
 import { chapters, dockStart, ISLANDS } from "@/lib/story";
 import { profile } from "@/lib/data";
 
@@ -24,15 +24,34 @@ export default function Voyage() {
   const [found, setFound] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
   const soundRef = useRef<OceanSound | null>(null);
+  const exploreRef = useRef<HTMLButtonElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [landed, setLanded] = useState<number | null>(null);
+  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+  const landedRef = useRef<number | null>(null);
+  const activeRef = useRef(-1);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
     const engine = new VoyageEngine(canvas);
     engineRef.current = engine;
-    engine.onActive = setActive;
+    engine.onActive = (i) => {
+      activeRef.current = i;
+      setActive(i);
+    };
     engine.onLightning = () => soundRef.current?.thunder();
     engine.onFrame = (p) => {
       soundRef.current?.update(engine.audio, performance.now() / 1000);
+      // keep the "Explore" beacon above the island you've reached
+      const btn = exploreRef.current;
+      const i = activeRef.current;
+      if (btn) {
+        const a = i >= 0 && i < ISLANDS && landedRef.current === null ? engine.anchors[i] : undefined;
+        if (a) {
+          btn.style.transform = `translate(${a.x}px, ${a.y - 70}px) translate(-50%, -100%)`;
+          btn.dataset.show = "1";
+        } else btn.dataset.show = "0";
+      }
       if (titleRef.current) {
         const a = 1 - Math.min(1, Math.max(0, (p - 0.012) / 0.03));
         titleRef.current.style.opacity = String(a);
@@ -55,7 +74,15 @@ export default function Voyage() {
     };
     const onMove = (e: PointerEvent) => engine.pointer(e.clientX, e.clientY);
     const onDown = (e: PointerEvent) => {
-      if ((e.target as HTMLElement).closest("a,button,summary,details,[data-panel]")) return;
+      if ((e.target as HTMLElement).closest("a,button,summary,details,[data-panel],.jungle")) return;
+      if (landedRef.current !== null) return;
+      // clicking the island you've reached lands you on it
+      const i = activeRef.current;
+      const a = i >= 0 && i < ISLANDS ? engine.anchors[i] : undefined;
+      if (a && Math.abs(e.clientX - a.x) < a.w * 0.55 && e.clientY > a.y - 60 && e.clientY < a.by + 30) {
+        land(i);
+        return;
+      }
       if (engine.click(e.clientX, e.clientY)) {
         setFound(true);
         soundRef.current?.chime();
@@ -84,6 +111,29 @@ export default function Voyage() {
     setSoundOn(next);
   };
 
+  const land = (i: number) => {
+    const engine = engineRef.current;
+    if (!engine || landedRef.current !== null) return;
+    const a = engine.anchors[i];
+    landedRef.current = i;
+    if (exploreRef.current) exploreRef.current.dataset.show = "0";
+    setZoom({ x: a?.x ?? window.innerWidth / 2, y: ((a?.y ?? 0) + (a?.by ?? 0)) / 2 });
+    document.documentElement.style.overflow = "hidden";
+    setTimeout(() => {
+      setLanded(i);
+      engine.paused = true;
+    }, 700);
+  };
+
+  const leave = () => {
+    const engine = engineRef.current;
+    if (engine) engine.paused = false;
+    setLanded(null);
+    setZoom(null);
+    landedRef.current = null;
+    document.documentElement.style.overflow = "";
+  };
+
   const jump = (i: number) => {
     const max = document.documentElement.scrollHeight - window.innerHeight;
     const p = i >= ISLANDS ? 1 : dockStart(i) + 0.02;
@@ -93,7 +143,13 @@ export default function Voyage() {
   return (
     <div style={{ height: "1600svh" }} className="relative">
       <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-label="An animated night voyage across the ocean" role="img" />
+        <div
+          ref={stageRef}
+          className="sea-stage absolute inset-0"
+          style={zoom ? { transformOrigin: `${zoom.x}px ${zoom.y}px`, transform: "scale(3.2)", filter: "blur(6px)", opacity: 0.2 } : undefined}
+        >
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-label="An animated voyage across the ocean" role="img" />
+        </div>
 
         {/* opening: the name, at sunrise */}
         <div ref={titleRef} className="absolute inset-x-0 top-[7%] px-6 text-center text-white md:top-[12%]">
@@ -124,33 +180,22 @@ export default function Voyage() {
           </p>
         ))}
 
-        {/* island chapters */}
-        {chapters.map((c, i) => {
-          const Panel = PANELS[i];
-          const on = active === i;
-          return (
-            <section
-              key={c.id}
-              id={c.id}
-              data-panel
-              aria-hidden={!on}
-              className={`absolute inset-x-3 top-[45%] bottom-20 overflow-y-auto overscroll-contain rounded-3xl bg-[#04131b]/70 p-6 ring-1 ring-white/10 backdrop-blur-xl transition-all duration-700 ease-out md:inset-x-auto md:top-[11%] md:bottom-[13%] md:left-[4%] md:w-[min(540px,40vw)] md:p-8 ${
-                on ? "translate-y-0 opacity-100 blur-0" : "pointer-events-none translate-y-6 opacity-0 blur-sm"
-              }`}
-            >
-              <p className="flex items-center gap-3 text-sm">
-                <span className="text-gold">Island {c.n}</span>
-                <span className="h-px w-6 bg-gold/40" />
-                <span className="text-cream/55">{c.island}</span>
-              </p>
-              <h2 className="mt-3 font-display text-4xl leading-[1.02] text-cream md:text-5xl">{c.title}</h2>
-              <p className="mt-3 font-display text-lg leading-snug text-cream/65 italic md:text-xl">{c.story}</p>
-              <div className="mt-6">
-                <Panel />
-              </div>
-            </section>
-          );
-        })}
+        {/* the island you've reached: tap to land */}
+        <button
+          ref={exploreRef}
+          type="button"
+          data-show="0"
+          onClick={() => activeRef.current >= 0 && land(activeRef.current)}
+          className="explore absolute top-0 left-0 z-20 flex flex-col items-center gap-2"
+          aria-label={active >= 0 && active < ISLANDS ? `Explore ${chapters[active].island}` : "Explore"}
+        >
+          <span className="rounded-full bg-white/90 px-5 py-2.5 text-sm font-semibold text-[#0b2a33] shadow-[0_8px_30px_rgba(0,0,0,0.25)] backdrop-blur">
+            {active >= 0 && active < ISLANDS ? `Explore ${chapters[active].island}` : "Explore"} ↗
+          </span>
+          <span className="explore-pin" />
+        </button>
+
+        {landed !== null && <Jungle key={landed} index={landed} env={engineRef.current!.env} onClose={leave} />}
 
         {/* the bottom */}
         <section
@@ -210,7 +255,7 @@ export default function Voyage() {
         {/* island navigator */}
         <nav
           aria-label="Voyage chapters"
-          className="absolute inset-x-0 bottom-4 flex justify-center"
+          className={`absolute inset-x-0 bottom-4 flex justify-center transition-opacity ${landed !== null ? "pointer-events-none opacity-0" : ""}`}
         >
           <ol className="flex items-center gap-1 rounded-full bg-black/30 px-2 py-1.5 ring-1 ring-white/10 backdrop-blur-md">
             {chapters.map((c, i) => (
