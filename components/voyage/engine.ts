@@ -131,6 +131,8 @@ export class VoyageEngine {
   mouse = { x: -9999, y: -9999, last: 0 };
   ring = { x: 0, y: 0, r: 0, landed: false };
   onActive?: (i: number) => void;
+  onLightning?: () => void;
+  audio = { night: 0, storm: 0, under: 0 };
   onFrame?: (p: number) => void;
   private lastActive = -2;
 
@@ -1277,6 +1279,7 @@ export class VoyageEngine {
     const under = sstep(WAVE_END - 0.01, WAVE_END + 0.02, p);
     this.swells = this.swells.filter((s) => now - s.t0 < 2600);
 
+    this.audio = { night: this.night, storm: this.storm, under };
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
     if (under < 1) {
@@ -1445,6 +1448,7 @@ export class VoyageEngine {
         }
         if (st > 0.35 && this.t > this.nextBolt) {
           this.flash = 1;
+          this.onLightning?.();
           const bx = W * (0.2 + R() * 0.6);
           const pts = [{ x: bx, y: 0 }];
           while (pts[pts.length - 1].y < hz) pts.push({ x: pts[pts.length - 1].x + (R() - 0.5) * 50, y: pts[pts.length - 1].y + 20 + R() * 30 });

@@ -1,6 +1,6 @@
 export const profile = {
   name: "Atufa Khan",
-  role: "AI / ML Engineer & Researcher",
+  role: "Software Engineer",
   tagline:
     "I build LLM agents, evaluation pipelines and healthcare AI — and write papers about what I learn along the way.",
   email: "atufacodeaiml@gmail.com",

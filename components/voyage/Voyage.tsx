@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { VoyageEngine } from "./engine";
+import { OceanSound } from "./sound";
 import { PANELS } from "./Panels";
 import { chapters, dockStart, ISLANDS } from "@/lib/story";
 import { profile } from "@/lib/data";
@@ -21,13 +22,17 @@ export default function Voyage() {
   const lineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [active, setActive] = useState(-1);
   const [found, setFound] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
+  const soundRef = useRef<OceanSound | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
     const engine = new VoyageEngine(canvas);
     engineRef.current = engine;
     engine.onActive = setActive;
+    engine.onLightning = () => soundRef.current?.thunder();
     engine.onFrame = (p) => {
+      soundRef.current?.update(engine.audio, performance.now() / 1000);
       if (titleRef.current) {
         const a = 1 - Math.min(1, Math.max(0, (p - 0.012) / 0.03));
         titleRef.current.style.opacity = String(a);
@@ -51,7 +56,10 @@ export default function Voyage() {
     const onMove = (e: PointerEvent) => engine.pointer(e.clientX, e.clientY);
     const onDown = (e: PointerEvent) => {
       if ((e.target as HTMLElement).closest("a,button,summary,details,[data-panel]")) return;
-      if (engine.click(e.clientX, e.clientY)) setFound(true);
+      if (engine.click(e.clientX, e.clientY)) {
+        setFound(true);
+        soundRef.current?.chime();
+      }
     };
     const onResize = () => engine.resize();
     window.addEventListener("scroll", progress, { passive: true });
@@ -61,12 +69,20 @@ export default function Voyage() {
     progress();
     return () => {
       engine.destroy();
+      soundRef.current?.destroy();
       window.removeEventListener("scroll", progress);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("resize", onResize);
     };
   }, []);
+
+  const toggleSound = () => {
+    if (!soundRef.current) soundRef.current = new OceanSound();
+    const next = !soundOn;
+    soundRef.current.setEnabled(next);
+    setSoundOn(next);
+  };
 
   const jump = (i: number) => {
     const max = document.documentElement.scrollHeight - window.innerHeight;
@@ -85,7 +101,7 @@ export default function Voyage() {
             Atufa
           </h1>
           <p className="title-rise mt-2 font-display text-2xl text-white/90 italic md:text-3xl" style={{ animationDelay: "0.5s" }}>
-            Khan · AI/ML engineer &amp; researcher
+            Khan · Software Engineer
           </p>
           <p className="title-rise mx-auto mt-5 max-w-md text-base text-white/85 [text-shadow:0_2px_20px_rgba(60,30,30,0.5)] md:text-lg" style={{ animationDelay: "1s" }}>
             Sail with me from sunrise to the bottom of the sea, where something gold was lost.
@@ -165,6 +181,31 @@ export default function Voyage() {
           </div>
           {!found && <p className="mt-6 animate-pulse text-xs tracking-[0.3em] text-cream/55 uppercase">Click the ring</p>}
         </section>
+
+        {/* sound toggle (off until the visitor asks for it) */}
+        <button
+          type="button"
+          onClick={toggleSound}
+          aria-label={soundOn ? "Mute ocean sound" : "Play ocean sound"}
+          aria-pressed={soundOn}
+          title={soundOn ? "Sound on" : "Sound off"}
+          className={`absolute top-4 right-4 z-40 flex h-11 items-center gap-2 rounded-full px-3.5 text-sm ring-1 backdrop-blur-md transition ${
+            soundOn ? "bg-gold/90 text-[#1a1206] ring-gold" : "bg-black/25 text-white/85 ring-white/20 hover:bg-black/40"
+          }`}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" fillOpacity="0.15" />
+            {soundOn ? (
+              <>
+                <path d="M15.5 9a4 4 0 0 1 0 6" />
+                <path d="M18 6.5a7.5 7.5 0 0 1 0 11" />
+              </>
+            ) : (
+              <path d="M16 9.5l5 5m0-5l-5 5" />
+            )}
+          </svg>
+          <span className="hidden sm:inline">{soundOn ? "Sound on" : "Sound"}</span>
+        </button>
 
         {/* island navigator */}
         <nav

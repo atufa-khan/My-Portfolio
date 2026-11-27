@@ -7,7 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Atufa Khan — The Wayfinder",
   description:
-    "Portfolio of Atufa Khan: AI/ML engineer and researcher building LLM agents, evaluation pipelines and healthcare AI. B.Tech CSE (AI & ML), Sharda University.",
+    "Portfolio of Atufa Khan: software engineer building LLM agents, evaluation pipelines and healthcare AI. B.Tech CSE (AI & ML), Sharda University.",
   openGraph: {
     title: "Atufa Khan — The Wayfinder",
     description: "LLM agents, evaluation pipelines and healthcare AI.",
