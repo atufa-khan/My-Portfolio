@@ -2,11 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { JungleScene, trailLayout, multiPeaks, type Env } from "./jungle";
-import { education, experience, profile, projects, publications } from "@/lib/data";
+import { education, experience, profile, projects, publications, skills } from "@/lib/data";
 import { chapters } from "@/lib/story";
 import { trails, type Find } from "@/lib/jungle";
 
 type Key = number | "summit" | "extra";
+
+/** One line under each island's title, never repeated. */
+const SUBTITLES = [
+  "Sharda University · B.Tech CSE (AI & ML) · 2023–2027",
+  "Crink Pvt Ltd and IIIT Kottayam · May – Aug 2026",
+  "2 accepted · 2 under review · 1 in progress",
+  "Five projects, and the tools behind them",
+  "Academic distinctions, hackathons and leadership roles",
+];
 
 export default function Jungle({ index, env, onClose }: { index: number; env: Env; onClose: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,13 +94,13 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
       </>)}
 
       {/* header */}
-      <div className="jungle-head pointer-events-none absolute top-5 left-5 max-w-[78%] md:top-8 md:left-10 md:max-w-md">
+      <div className="jungle-head pointer-events-none absolute top-[66px] left-5 max-w-[80%] md:top-8 md:left-10 md:max-w-[min(820px,60vw)]">
         <p className="text-xs font-semibold tracking-[0.25em] text-white/75 uppercase [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
           Island {ch.n} · {ch.island}
         </p>
-        <h2 className="mt-2 font-display text-4xl leading-[1] text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] md:text-6xl">{ch.title}</h2>
+        <h2 className="mt-2 font-display text-[23px] leading-[1.08] text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.6)] [text-wrap:balance] md:text-[38px]">{ch.title}</h2>
         <p className="mt-3 text-sm text-white/80 [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
-          {index === 0 ? "Where it all started" : index === 1 ? "Two summits, two internships" : index === 2 ? "Three summits, five papers" : index === 3 ? "Five huts, five projects" : "Follow the trail to the summit ↑"}
+          {SUBTITLES[index]}
         </p>
       </div>
 
@@ -117,7 +126,15 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
             className={`waypoint absolute z-10 flex items-center gap-3 ${right ? "" : "flex-row-reverse"}`}
             style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, "--d": `${1.1 + k * 0.25}s` } as CSSProperties}
           >
-            <span className="wp-dot" />
+            {index === 4 ? (
+              <svg viewBox="0 0 30 38" className="planted h-9 w-7 shrink-0" aria-hidden>
+                <line x1="6" y1="3" x2="6" y2="36" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                <path className="flag-cloth" d="M7 4 C 13 2, 18 8, 27 5 L 25 16 C 18 18, 13 13, 7 15 Z" fill="#e9c46a" />
+                <ellipse cx="6" cy="36" rx="5" ry="1.6" fill="rgba(0,0,0,0.35)" />
+              </svg>
+            ) : (
+              <span className="wp-dot" />
+            )}
             <div className={`wp-card ${right ? "" : "text-right"}`}>
               <h3 className="font-display text-lg leading-tight text-white md:text-[22px]">
                 {s.title}
@@ -300,7 +317,7 @@ function Summits({ mobile, island }: { mobile: boolean; island: number }) {
   const n = groups.length;
   const width = n === 2 ? "min(470px,36vw)" : "min(380px,26vw)";
   const half = n === 2 ? "min(235px,18vw)" : "min(190px,13vw)";
-  const drop = n === 2 ? "24%" : "22%";
+  const drop = n === 2 ? "19%" : "17%";
   const Detail = ({ k }: { k: number }) => (
     <div className="intern-card rounded-2xl bg-[#06201c]/85 p-5 text-white ring-1 ring-white/20 backdrop-blur-xl md:p-6" style={{ "--d": `${1.2 + k * 0.3}s` } as CSSProperties}>
       <p className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">{groups[k].kicker}</p>
@@ -353,7 +370,7 @@ function Summits({ mobile, island }: { mobile: boolean; island: number }) {
 }
 
 
-const SIGN = ["Sukoonify", "Memora", "Performance platform", "RAG chatbot", "Brain-X"];
+const SIGN = ["Sukoonify", "Memora", "Performance platform", "RAG assistant", "Brain-X"];
 const SIGN_SHORT = ["Sukoonify", "Memora", "PMS", "RAG bot", "Brain-X"];
 
 /** Island IV: a hut per project, its name on a wooden sign, its details beneath. */
@@ -361,16 +378,17 @@ function Village({ mobile, huts }: { mobile: boolean; huts: { x: number; y: numb
   if (!huts.length) return null;
   const Card = ({ k, title }: { k: number; title?: boolean }) => {
     const p = projects[k];
+    const stack = mobile ? p.stack : p.stack.slice(0, k === 0 && typeof window !== "undefined" && window.innerHeight > 820 ? 7 : 4);
     return (
-      <div className="intern-card rounded-md bg-[#06201c]/85 p-5 text-white ring-1 ring-white/20 backdrop-blur-xl" style={{ "--d": `${1.2 + k * 0.15}s` } as CSSProperties}>
+      <div className="intern-card rounded-md bg-[#06201c]/85 p-4 text-white lg:p-5 ring-1 ring-white/20 backdrop-blur-xl" style={{ "--d": `${1.2 + k * 0.15}s` } as CSSProperties}>
         <div className="flex flex-wrap items-center gap-2">
           {title && <h3 className="font-display text-2xl leading-tight">{p.name}</h3>}
           <span className="text-xs text-white/55">{p.year}</span>
           {p.tag && <span className="rounded-sm bg-gold px-2 py-0.5 text-[10px] font-semibold text-[#1a1206]">{p.tag}</span>}
         </div>
-        <p className="mt-1.5 text-[14.5px] leading-snug text-white/90">{p.blurb}</p>
+        <p className="mt-1.5 text-[14px] leading-snug text-white/90 lg:text-[14.5px]">{p.blurb}</p>
         <div className="mt-2 flex flex-wrap gap-1">
-          {p.stack.map((c) => (
+          {stack.map((c) => (
             <span key={c} className="rounded-sm bg-white/10 px-2.5 py-0.5 text-[12px] text-white/85 ring-1 ring-white/15">
               {c}
             </span>
@@ -385,9 +403,24 @@ function Village({ mobile, huts }: { mobile: boolean; huts: { x: number; y: numb
   const width = "min(300px, 18.6vw)";
   return (
     <>
+      {/* hover a hut and it sways */}
+      {huts.map((h, k) => (
+        <div
+          key={`hz${k}`}
+          className="hut-hover absolute z-[9]"
+          style={{ left: h.x - 34 * h.s, top: h.y - 44 * h.s, width: 68 * h.s, height: 48 * h.s }}
+          onMouseEnter={(e) => {
+            const sign = e.currentTarget.parentElement?.querySelector(`[data-hut="${k}"]`);
+            sign?.classList.remove("sway");
+            void (sign as HTMLElement | null)?.offsetWidth;
+            sign?.classList.add("sway");
+          }}
+        />
+      ))}
       {huts.map((h, k) => (
         <div
           key={k}
+          data-hut={k}
           className={`hut-sign ${k === 0 ? "hut-sign-big" : ""}`}
           style={{ left: h.x, top: mobile ? h.y + 12 : h.y - 23 * h.s, "--d": `${0.8 + k * 0.12}s` } as CSSProperties}
         >
@@ -399,24 +432,30 @@ function Village({ mobile, huts }: { mobile: boolean; huts: { x: number; y: numb
           {projects.map((_, k) => (
             <Card key={k} k={k} title />
           ))}
+          <SkillsCard />
         </div>
       ) : (
-        huts.map((h, k) => (
+        <>
+        <div className="absolute z-10" style={{ right: 24, top: 78, width: "min(640px, 47vw)" }}>
+          <SkillsCard compact />
+        </div>
+        {huts.map((h, k) => (
           <div
             key={k}
             className="summit-card-wrap absolute z-10 overflow-y-auto overscroll-contain rounded-md"
-            style={{ width, left: `clamp(12px, calc(${h.x}px - ${width} / 2), calc(100% - ${width} - 12px))`, top: h.y + 16, maxHeight: `calc(100% - ${h.y + 16}px - 90px)` }}
+            style={{ width, left: `clamp(12px, calc(${h.x}px - ${width} / 2), calc(100% - ${width} - 12px))`, top: h.y + 14, maxHeight: `calc(100% - ${h.y + 14}px - ${k === 0 ? 20 : 84}px)` }}
           >
             <Card k={k} />
           </div>
-        ))
+        ))}
+        </>
       )}
     </>
   );
 }
 
 
-/** Island I: the lighthouse is Sharda University; coursework floats as buoys in the bay. */
+/** Island I: the lighthouse is Sharda University; the first-ranked courses float as buoys in the bay. */
 function Lighthouse({ mobile, light, buoys }: { mobile: boolean; light: JungleScene["light"]; buoys: JungleScene["buoys"] }) {
   if (!light) return null;
   const isFirst = (c: string) => education.firsts.includes(c);
@@ -431,33 +470,20 @@ function Lighthouse({ mobile, light, buoys }: { mobile: boolean; light: JungleSc
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-sm bg-white/[0.06] p-3 ring-1 ring-white/10">
           <p className="font-display text-3xl leading-none text-gold">9.1</p>
-          <p className="mt-1 text-xs text-white/70">CGPA · {education.honor}</p>
+          <p className="mt-1 text-xs text-white/70">CGPA out of 10</p>
         </div>
         <div className="rounded-sm bg-white/[0.06] p-3 ring-1 ring-white/10">
           <p className="font-display text-3xl leading-none text-gold">1st</p>
           <p className="mt-1 text-xs text-white/70">across all sections in 3 subjects</p>
         </div>
       </div>
-      {mobile && (
-        <div className="mt-4">
-          <p className="text-[11px] font-semibold tracking-[0.2em] text-white/55 uppercase">Coursework</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {education.coursework.map((c) => (
-              <span key={c} className={`rounded-sm px-2 py-0.5 text-[12px] ring-1 ${isFirst(c) ? "bg-gold text-[#1a1206] ring-gold" : "bg-white/10 text-white/85 ring-white/15"}`}>
-                {isFirst(c) && "★ "}
-                {c}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
   return (
     <>
       {/* gold medals on the railing */}
       <div className="hut-sign pointer-events-none" style={{ left: light.x, top: light.rail + 48 * light.s, "--d": "0.9s", fontSize: mobile ? 11 : 15 } as CSSProperties}>
-        4× Gold Medalist
+        Est. 2023
       </div>
       {mobile ? (
         <div className="absolute inset-x-3 bottom-[78px] z-10 overflow-y-auto overscroll-contain pb-2" style={{ top: `${light.base + 14}px` }}>
@@ -471,22 +497,25 @@ function Lighthouse({ mobile, light, buoys }: { mobile: boolean; light: JungleSc
           >
             {card}
           </div>
-          {buoys.map((b, k) => {
-            const c = education.coursework[k];
-            const first = isFirst(c);
-            return (
-              <div
-                key={c}
-                className={`buoy-label ${first ? "buoy-gold" : ""}`}
-                style={{ left: b.x, top: b.y - 34 * light.s, "--d": `${1.2 + k * 0.08}s` } as CSSProperties}
-              >
-                {first && <span className="mr-1">★</span>}
-                {c}
-              </div>
-            );
-          })}
         </>
       )}
     </>
+  );
+}
+
+/** The tools behind the projects. */
+function SkillsCard({ compact }: { compact?: boolean }) {
+  return (
+    <div className={`intern-card rounded-md bg-[#06201c]/80 text-white ring-1 ring-white/20 backdrop-blur-xl ${compact ? "px-4 py-3" : "p-5"}`} style={{ "--d": "1.9s" } as CSSProperties}>
+      <p className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">Skills</p>
+      <dl className={`mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 ${compact ? "gap-y-0.5 text-[12.5px]" : "gap-y-1.5 text-[13.5px]"} leading-snug`}>
+        {skills.map((g) => (
+          <div key={g.group} className="contents">
+            <dt className="font-semibold whitespace-nowrap text-white/95">{g.group}</dt>
+            <dd className="text-white/75">{g.items.join(", ")}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }

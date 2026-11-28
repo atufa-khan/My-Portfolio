@@ -106,6 +106,8 @@ export class VoyageEngine {
   private swells: Swell[] = [];
   private shooting: { x: number; y: number; vx: number; vy: number; t0: number } | null = null;
   private nextShoot = 3;
+  /** a shoal under the surface that scatters away from the cursor */
+  private shoal: { x: number; y: number; vx: number; vy: number; ph: number; s: number }[] = [];
   private leaper: { x: number; y: number; t0: number; dir: number; s: number } | null = null;
   private nextLeap = 4;
   private whale: { x: number; t0: number } | null = null;
@@ -679,6 +681,9 @@ export class VoyageEngine {
       g.font = `italic ${Math.round((this.mobile ? 17 : 22) * this.sc)}px "Instrument Serif", Georgia, serif`;
       g.textAlign = "center";
       g.fillText(`${chapters[i].n} · ${chapters[i].island}`, x, topY);
+      g.font = `600 ${Math.round((this.mobile ? 11 : 13) * this.sc)}px "DM Sans Variable", system-ui, sans-serif`;
+      g.fillStyle = "rgba(255,226,150,0.95)";
+      g.fillText(chapters[i].year.toUpperCase(), x, topY + (this.mobile ? 15 : 22) * this.sc);
       g.shadowBlur = 0;
       g.globalAlpha = 1;
     }
@@ -1057,6 +1062,57 @@ export class VoyageEngine {
         g.restore();
         if (a > 0.6 && a < 0.65) this.splash(this.whale.x, by, 8);
       }
+    }
+  }
+
+  private drawShoal(dt: number, vis: number) {
+    const { W, H, g } = this;
+    const hz = this.horizon;
+    const top = hz + (H - hz) * 0.42, bot = H - 20;
+    if (!this.shoal.length) {
+      const cx = W * 0.3, cy = (top + bot) / 2;
+      for (let i = 0; i < (this.mobile ? 10 : 18); i++)
+        this.shoal.push({ x: cx + (R() - 0.5) * 220, y: cy + (R() - 0.5) * 70, vx: 0.6 + R() * 0.3, vy: 0, ph: R() * 6, s: (0.7 + R() * 0.6) * this.sc * (this.mobile ? 0.8 : 1) });
+    }
+    const m = this.mouse;
+    const live = performance.now() - m.last < 1500;
+    // the shoal's heart, so stragglers keep together
+    let ax = 0, ay = 0;
+    for (const f of this.shoal) { ax += f.x; ay += f.y; }
+    ax /= this.shoal.length; ay /= this.shoal.length;
+    for (const f of this.shoal) {
+      if (!this.reduce) {
+        if (live) {
+          const dx = f.x - m.x, dy = f.y - m.y, d = Math.hypot(dx, dy);
+          if (d < 140) { const k = (1 - d / 140) * 0.9; f.vx += (dx / (d || 1)) * k; f.vy += (dy / (d || 1)) * k; }
+        }
+        f.vx += (0.7 - f.vx) * 0.02 + (ax - f.x) * 0.0006;
+        f.vy += (ay - f.y) * 0.0008 - f.vy * 0.04;
+        if (f.y < top) f.vy += 0.15;
+        if (f.y > bot) f.vy -= 0.15;
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        if (f.x > W + 60) { f.x -= W + 260; }
+        if (f.x < -260) f.x += W + 260;
+      }
+      const a = 0.22 * vis * (1 - this.night * 0.5);
+      const ang = Math.atan2(f.vy, f.vx);
+      const wag = Math.sin(this.t * 9 + f.ph) * 0.35;
+      g.save();
+      g.translate(f.x, f.y);
+      g.rotate(ang);
+      g.scale(f.s, f.s);
+      g.fillStyle = `rgba(8,40,55,${a})`;
+      g.beginPath();
+      g.ellipse(0, 0, 11, 3.6, 0, 0, TAU);
+      g.fill();
+      g.beginPath();
+      g.moveTo(-9, 0);
+      g.lineTo(-16, -4 + wag * 4);
+      g.lineTo(-16, 4 + wag * 4);
+      g.closePath();
+      g.fill();
+      g.restore();
     }
   }
 
@@ -1496,6 +1552,7 @@ export class VoyageEngine {
         g.fillRect(xx, yy, 4 + (i % 4) * 4, 1.2);
       }
       if (under <= 0) this.drawParticles(dt, camVel);
+      if (st < 0.5) this.drawShoal(dt, 1 - st * 2);
       this.drawLayer(4, this.lightX);
       this.drawPods(4);
       this.drawLayer(5, this.lightX);

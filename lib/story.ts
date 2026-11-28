@@ -4,48 +4,43 @@ export type IslandKind = "shallows" | "arches" | "reef" | "village" | "summit" |
 
 export const chapters: {
   id: string; n: string; island: string; kind: IslandKind; title: string; story: string;
+  /** When this part of the story happened. */
+  year: string;
+  /** The single best fact, shown as the canoe passes. */
+  teaser: string;
 }[] = [
   {
-    id: "about", n: "I", island: "The Shallows", kind: "shallows",
-    title: "Where the light still reaches.",
+    id: "about", year: "2023", teaser: "9.1 CGPA, and first across all sections in three subjects", n: "I", island: "Education", kind: "shallows",
+    title: "A strong foundation in AI and machine learning.",
     story: "Every voyage starts close to shore. Mine started with how minds work: the three courses where I came first, Brain-Computer Interface, NLP and Pattern Recognition, were all about exactly that.",
   },
   {
-    id: "experience", n: "II", island: "The Current", kind: "arches",
-    title: "The current.",
+    id: "experience", year: "Summer 2026", teaser: "AI Engineering Intern @ Crink: LLM eval pipelines", n: "II", island: "Experience", kind: "arches",
+    title: "Building LLM systems in industry and research.",
     story: "Past the shallows the current takes hold. An internship where models stopped being experiments and had to work for real people, every day.",
   },
   {
-    id: "research", n: "III", island: "The Reef", kind: "reef",
-    title: "Quieter questions.",
+    id: "research", year: "2026", teaser: "Research in ML for mental health and medical imaging", n: "III", island: "Research", kind: "reef",
+    title: "Research publications.",
     story: "On the reef it’s quiet enough to think properly. Four papers so far, two accepted, most of them about minds that need care.",
   },
   {
-    id: "projects", n: "IV", island: "The Village", kind: "village",
-    title: "Built for people who need them.",
+    id: "projects", year: "2024 – 2026", teaser: "Sukoonify: national hackathon finalist, top 60 of 500+ teams", n: "IV", island: "Projects & Skills", kind: "village",
+    title: "Projects and skills.",
     story: "This is what the voyage is really for: things made for students who are struggling, patients who forget, and the people who care for them.",
   },
   {
-    id: "honors", n: "V", island: "The Summit", kind: "summit",
-    title: "Gold finds gold.",
-    story: "Gold has a way of finding gold. Four medals, a section topper, and two hackathons where the same idea, care for student mental health, kept making the cut.",
-  },
-  {
-    id: "leadership", n: "VI", island: "The Gathering", kind: "fire",
-    title: "No one sails alone.",
-    story: "Debates, delegations, workshops, and people who know more than I do. They’re how the fire stays lit.",
-  },
-  {
-    id: "skills", n: "VII", island: "The Trading Post", kind: "dock",
-    title: "What I carry.",
-    story: "One last stop before the open sea, to load the canoe. This is everything I carry.",
+    id: "honors", year: "2023 – 2026", teaser: "4× Gold Medalist, and a national hackathon finalist", n: "V", island: "Achievements & Leadership", kind: "summit",
+    title: "Achievements and leadership.",
+    story: "Academic distinctions, competitive results and leadership roles.",
   },
 ];
 
 export const ISLANDS = chapters.length;
 export const DOCK0 = 0.06;
-export const STEP = 0.093;
-export const DWELL = 0.046;
+/** spacing scales with the number of islands, so the voyage keeps its length */
+export const STEP = 0.651 / chapters.length;
+export const DWELL = STEP * 0.5;
 export const dockStart = (i: number) => DOCK0 + i * STEP;
 export const dockEnd = (i: number) => dockStart(i) + DWELL;
 export const SEA_END = 0.77; // storm peaks

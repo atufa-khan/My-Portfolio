@@ -31,10 +31,10 @@ export function multiPeaks(mobile: boolean, island: number) {
 }
 
 /** How high each island's peak rises (screen fraction from the top), I → VII. */
-const PEAK = [0.27, 0.19, 0.23, 0.14, 0.1, 0.22, 0.29];
+const PEAK = [0.27, 0.27, 0.29, 0.14, 0.18];
 export function trailLayout(n: number, mobile: boolean, island = 3) {
   // on phones the peaks vary less, so the cards always have room
-  const peakY = mobile ? 0.24 + (PEAK[island] - 0.14) * 0.45 : PEAK[island];
+  const peakY = mobile ? 0.24 + (PEAK[island] - 0.14) * 0.45 + (island === 1 || island === 2 ? 0.05 : 0) : PEAK[island];
   const top = peakY + (mobile ? 0.14 : 0.19);
   const bottom = mobile ? 0.84 : 0.8;
   const stops = Array.from({ length: n }, (_, k) => {
@@ -98,6 +98,11 @@ export class JungleScene {
   private my = 0;
   private sm = { x: 0, y: 0 };
   leaving = false;
+  private beam = Math.PI;
+  private lastMove = 0;
+  private px = 0;
+  private py = 0;
+  private reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   constructor(private canvas: HTMLCanvasElement, private kind: IslandKind, private env: Env, private seed: number) {
     this.g = canvas.getContext("2d")!;
@@ -116,6 +121,9 @@ export class JungleScene {
     this.bake();
   }
   pointer(x: number, y: number) {
+    this.px = x;
+    this.py = y;
+    this.lastMove = performance.now();
     this.mx = x / this.W - 0.5;
     this.my = y / this.H - 0.5;
   }
@@ -720,7 +728,8 @@ export class JungleScene {
       const xs = this.mobile ? [0.5, 0.3, 0.7, 0.1, 0.9] : [0.5, 0.305, 0.695, 0.11, 0.89];
       xs.forEach((u, k) => {
         const x = W * u;
-        const y = H * (this.mobile ? (k === 0 ? 0.47 : 0.45) : k === 0 ? 0.6 : 0.57);
+        const lift = this.mobile ? 0 : Math.max(0, Math.min(0.07, (850 - H) / 1800));
+        const y = H * ((this.mobile ? (k === 0 ? 0.47 : 0.45) : k === 0 ? 0.6 : 0.57) - lift);
         const sc = s * (this.mobile ? (k === 0 ? 1.3 : 0.95) : k === 0 ? 2.5 : 1.8);
         this.hutAnchors[k] = { x, y, s: sc };
         this.huts.push({ x, y, s: sc });
@@ -982,10 +991,10 @@ export class JungleScene {
     g.stroke();
     this.light = { x, lamp, rail, base, s: ls };
 
-    // buoys in the bay, one per course
-    const n = 9;
-    const xs = m ? [0.1, 0.27, 0.44, 0.1, 0.27, 0.44, 0.61, 0.18, 0.36] : [0.16, 0.36, 0.56, 0.22, 0.42, 0.62, 0.2, 0.4, 0.6];
-    const ys = m ? [0.66, 0.66, 0.66, 0.74, 0.74, 0.74, 0.7, 0.82, 0.82] : [0.76, 0.76, 0.76, 0.85, 0.85, 0.85, 0.94, 0.94, 0.94];
+    // buoys in the bay, one per first-ranked course
+    const n = 0; // no coursework buoys
+    const xs = m ? [0.12, 0.3, 0.48] : [0.17, 0.37, 0.57];
+    const ys = m ? [0.7, 0.74, 0.7] : [0.8, 0.86, 0.8];
     this.buoys = Array.from({ length: n }, (_, k) => ({ x: W * xs[k], y: H * ys[k], gold: k < 3 }));
   }
 
@@ -996,7 +1005,19 @@ export class JungleScene {
     const { W, H } = this;
     const n = this.env.night;
     // the beam sweeps slowly across the bay
-    const ang = Math.PI + 0.55 * Math.sin(t * 0.45) - 0.15;
+    // sweeps on its own; leans toward the cursor while it moves
+    const sweep = Math.PI + 0.55 * Math.sin(t * 0.45) - 0.15;
+    let want = sweep;
+    if (!this.reduce && performance.now() - this.lastMove < 2200) {
+      const a2 = Math.atan2(this.py - L.lamp, this.px - L.x);
+      want = a2 < 0 && a2 > -Math.PI ? a2 : (a2 >= 0 ? (a2 < Math.PI / 2 ? 0.05 : Math.PI - 0.05) : a2);
+    }
+    if (this.reduce) want = Math.PI - 0.15;
+    let dA = want - this.beam;
+    while (dA > Math.PI) dA -= TAU;
+    while (dA < -Math.PI) dA += TAU;
+    this.beam += dA * 0.06;
+    const ang = this.beam;
     const len = W * 0.95;
     const spread = 0.13;
     g.save();

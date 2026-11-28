@@ -241,21 +241,12 @@ export const leadership = [
 ];
 
 export const skills = [
-  { group: "Languages", items: ["Python", "Java", "JavaScript", "TypeScript", "SQL", "C"] },
-  {
-    group: "AI / ML",
-    items: ["PyTorch", "HuggingFace Transformers", "LangChain", "LlamaIndex", "CNNs", "Transfer Learning", "Ensemble Learning", "Grad-CAM", "OpenCV"],
-  },
-  {
-    group: "Generative AI",
-    items: ["RAG", "FAISS", "ChromaDB", "Prompt Engineering", "LLM Evaluation", "LLM-as-a-Judge"],
-  },
-  {
-    group: "Software",
-    items: ["React.js", "Next.js", "Node.js", "Express.js", "FastAPI", "REST APIs", "HTML5", "CSS3"],
-  },
-  { group: "Databases", items: ["PostgreSQL", "MongoDB", "Supabase", "Vector Databases"] },
-  { group: "Cloud & Tools", items: ["Git", "GitHub", "Docker", "AWS", "Azure", "Linux"] },
+  { group: "Languages", items: ["Python", "TypeScript", "JavaScript", "Java", "SQL", "C"] },
+  { group: "Machine learning", items: ["PyTorch", "Hugging Face Transformers", "Keras", "scikit-learn", "OpenCV", "CNNs", "Transfer learning", "Ensemble learning", "Grad-CAM"] },
+  { group: "Generative AI", items: ["LLM agents", "RAG", "LangChain", "LlamaIndex", "FAISS", "ChromaDB", "Prompt engineering", "LLM evaluation", "LLM-as-a-Judge"] },
+  { group: "Software", items: ["React", "React Native", "Next.js", "Node.js", "Express", "FastAPI", "REST APIs", "Flutter"] },
+  { group: "Databases", items: ["PostgreSQL", "MongoDB", "Supabase", "Vector databases"] },
+  { group: "Cloud & tools", items: ["AWS", "Azure", "Docker", "Git", "GitHub", "Linux"] },
 ];
 
 export const certifications = [

@@ -41,7 +41,7 @@ export const trails: IslandTrail[] = [
       { title: "Hybrid ensembles", line: "Binary and multiclass mental-health classification. Springer conference.", status: "Under review" },
       { title: "Diffusion models", line: "Book chapter on diffusion models in vision, NLP and healthcare. Wiley.", status: "Under review" },
     ],
-    summit: { title: "2 papers accepted", line: "Both accepted at Springer conferences in 2026, both in healthcare AI." },
+    summit: { title: "Research", line: "Machine learning for mental health and medical imaging." },
   },
   // IV · The Village: Projects
   {
@@ -58,35 +58,16 @@ export const trails: IslandTrail[] = [
       link: gh,
     },
   },
-  // V · The Summit: Honors
+  // V · Achievements & Leadership
   {
     stops: [
-      { title: "Section topper", line: "First overall in Section CSK, third year." },
+      { title: "Section topper", line: "Ranked first overall in Section CSK, third year." },
       { title: "NPTEL Elite · 97%", line: "IIT Kharagpur course, among 21,132 certified candidates." },
-      { title: "Merit scholarship", line: "20% merit-based academic scholarship at Sharda University." },
+      { title: "Sustain-a-thon finalist", line: "Top 60 of 500+ teams at a national 32-hour hackathon." },
+      { title: "Smart India Hackathon", line: "Selected in the top 45 of 350+ teams (internal round)." },
+      { title: "Google Student Ambassador", line: "Led campus workshops on Google technologies, 2025–26." },
+      { title: "Youth Parliament & MUN", line: "Policy debates, and represented India in UNDP at MUN." },
     ],
     summit: { title: "4× Gold Medalist", line: "First position in four academic categories at Sharda University." },
-  },
-  // VI · The Gathering: Leadership & competitions
-  {
-    stops: [
-      { title: "Google Ambassador", line: "Ran campus workshops on Google technologies, 2025–26." },
-      { title: "Youth Parliament", line: "Parliamentary debates on social and developmental issues." },
-      { title: "MUN delegate", line: "Represented India in UNDP on overpopulation and sustainability." },
-      { title: "Smart India Hackathon", line: "Selected in the top 45 of 350+ teams (internal round)." },
-    ],
-    summit: { title: "Top 60 of 500+", line: "Finalist at Sustain-a-thon, a national 32-hour hackathon." },
-    extra: { title: "Rooms I’ve been in", line: "ELECRAMA 2025 and Azure DevOps Day at Microsoft Noida." },
-  },
-  // VII · The Trading Post: Skills
-  {
-    stops: [
-      { title: "Languages", line: "What I write in.", chips: ["Python", "TypeScript", "Java", "SQL", "C"] },
-      { title: "AI / ML", line: "What I train and explain with.", chips: ["PyTorch", "HuggingFace", "LangChain", "OpenCV", "Grad-CAM"] },
-      { title: "Generative AI", line: "What I build agents with.", chips: ["RAG", "FAISS", "ChromaDB", "LLM-as-a-Judge"] },
-      { title: "Software", line: "What I ship with.", chips: ["React", "Next.js", "Node.js", "FastAPI", "PostgreSQL"] },
-      { title: "Cloud & tools", line: "Where it runs.", chips: ["AWS", "Azure", "Docker", "Git", "Linux"] },
-    ],
-    summit: { title: "15 certifications", line: "From AWS, Oracle, Hugging Face, NPTEL and more." },
   },
 ];
