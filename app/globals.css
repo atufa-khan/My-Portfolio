@@ -54,27 +54,36 @@ body { background: #02070c; color: var(--color-cream); }
 .jungle-back { animation: headIn .8s ease 1.4s both; }
 @keyframes headIn { from { opacity: 0; transform: translateY(-14px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
 
-.trail-glow, .trail-line { fill: none; stroke-dasharray: 1; stroke-dashoffset: 1; animation: trailDraw 2.2s cubic-bezier(.5,0,.3,1) .7s forwards; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.trail { clip-path: inset(100% 0 0 0); animation: trailReveal 2.4s cubic-bezier(.5,0,.3,1) .7s forwards; }
+@keyframes trailReveal { to { clip-path: inset(0 0 0 0); } }
+.trail-glow, .trail-line { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 .trail-glow { stroke: rgba(255,226,150,.35); stroke-width: 10; filter: blur(4px); }
 .trail-line { stroke: rgba(255,244,214,.95); stroke-width: 2.4; }
-@keyframes trailDraw { to { stroke-dashoffset: 0; } }
 
 .waypoint { transform: translate(-9px, -50%); opacity: 0; animation: wpIn .6s cubic-bezier(.3,1.6,.5,1) var(--d, 1s) both; }
 .waypoint.flex-row-reverse { transform: translate(calc(-100% + 9px), -50%); }
 @keyframes wpIn { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
 .wp-dot { width: 18px; height: 18px; flex: none; border-radius: 9999px; background: #fff8e6; box-shadow: 0 0 0 4px rgba(255,255,255,.25), 0 0 22px rgba(255,236,180,.9); animation: wpPulse 2.2s ease-in-out infinite; }
 @keyframes wpPulse { 50% { box-shadow: 0 0 0 9px rgba(255,255,255,.12), 0 0 30px rgba(255,236,180,1); } }
+.wp-card { width: min(290px, 22vw); border-radius: 16px; background: rgba(6,30,26,.72); padding: 10px 14px 12px; backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 10px 30px rgba(0,0,0,.25); }
+@media (max-width: 759px) { .wp-card { width: min(250px, 66vw); padding: 7px 11px 8px; } .summit-line { display: none; } }
+.summit-line { margin-top: 6px; max-width: 260px; text-align: center; border-radius: 12px; background: rgba(6,30,26,.62); padding: 6px 12px; font-size: 13px; line-height: 1.35; color: rgba(255,255,255,.9); backdrop-filter: blur(8px); }
 .wp-label { white-space: nowrap; border-radius: 9999px; background: rgba(6,28,24,.55); padding: 6px 12px; font-size: 14px; font-weight: 500; color: #fff; backdrop-filter: blur(8px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); transition: background .2s ease, transform .2s ease; }
-.waypoint:hover .wp-label, .waypoint.is-open .wp-label { background: rgba(255,255,255,.92); color: #0b2a33; transform: scale(1.05); }
+.waypoint:hover .wp-label, .waypoint.is-open .wp-card { width: min(290px, 22vw); border-radius: 16px; background: rgba(6,30,26,.72); padding: 10px 14px 12px; backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 10px 30px rgba(0,0,0,.25); }
+@media (max-width: 759px) { .wp-card { width: min(250px, 66vw); padding: 7px 11px 8px; } .summit-line { display: none; } }
+.summit-line { margin-top: 6px; max-width: 260px; text-align: center; border-radius: 12px; background: rgba(6,30,26,.62); padding: 6px 12px; font-size: 13px; line-height: 1.35; color: rgba(255,255,255,.9); backdrop-filter: blur(8px); }
+.wp-label { background: rgba(255,255,255,.92); color: #0b2a33; transform: scale(1.05); }
 .waypoint.is-found .wp-dot { background: #e9c46a; box-shadow: 0 0 0 4px rgba(233,196,106,.3), 0 0 22px rgba(233,196,106,.9); animation: none; }
 
-.summit { transform: translate(-50%, -88%); opacity: 0; animation: wpIn .8s cubic-bezier(.3,1.6,.5,1) var(--d, 2s) both; }
+.summit { transform: translate(-50%, -46px); opacity: 0; animation: wpIn .8s cubic-bezier(.3,1.6,.5,1) var(--d, 2s) both; }
 .summit-flag { filter: drop-shadow(0 0 10px rgba(233,196,106,.8)); }
 .flag-cloth { transform-origin: 9px 12px; animation: flagWave 1.6s ease-in-out infinite; }
 @keyframes flagWave { 50% { transform: skewY(-6deg) scaleX(.92); } }
 .summit-label { margin-top: 2px; white-space: nowrap; border-radius: 9999px; background: #e9c46a; padding: 6px 14px; font-family: var(--font-display); font-size: 20px; color: #1a1206; box-shadow: 0 6px 24px rgba(233,196,106,.45); transition: transform .2s ease; }
 .summit:hover .summit-label { transform: scale(1.06); }
 
+.twin-flag { transform: translate(-50%, -46px); opacity: 0; animation: wpIn .8s cubic-bezier(.3,1.6,.5,1) var(--d, 1s) both; }
+.intern-card { opacity: 0; animation: cardIn .7s cubic-bezier(.3,1.2,.5,1) var(--d, 1.2s) both; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
 .extra { transform: translate(-50%, -50%); opacity: .55; animation: glint 2.6s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(255,240,190,.9)); }
 .extra:hover, .extra.is-found { opacity: 1; }
 @keyframes glint { 0%,100% { transform: translate(-50%,-50%) scale(.6) rotate(0); } 50% { transform: translate(-50%,-50%) scale(1.1) rotate(45deg); } }
@@ -89,5 +98,6 @@ body { background: #02070c; color: var(--color-cream); }
   .reveal { opacity: 1; transform: none; }
   [data-story="on"] [data-chapter] .chapter-body { clip-path: none; opacity: 1; transform: none; filter: none; }
   .intro-line, .title-rise, .waypoint, .summit, .jungle-head, .jungle-back { opacity: 1; }
-  .trail-glow, .trail-line { stroke-dashoffset: 0; }
+  .trail { clip-path: none; }
+  .twin-flag, .intern-card { opacity: 1; }
 }

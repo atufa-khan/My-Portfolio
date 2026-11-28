@@ -33,14 +33,24 @@ export const education = {
 export const experience = [
   {
     company: "Crink Pvt Ltd",
-    role: "AI Engineering Intern — Product Team (R&D)",
+    role: "AI Engineering Intern · Product Team (R&D)",
     period: "Jun 2026 – Aug 2026",
-    place: "Kochi, Kerala",
+    place: "Kerala, India",
     points: [
-      "Built AI coaching infrastructure for Cri, an AI leadership and performance coaching platform — LLM-powered agent systems and production AI workflows.",
-      "Developed LLM evaluation and LLM-as-a-Judge pipelines that score conversational AI across multiple quality dimensions for systematic benchmarking.",
-      "Built synthetic client-simulation agents that generate realistic coaching scenarios to test agent behaviour, conversation quality, reliability and edge cases.",
-      "Ran small language model training and fine-tuning experiments for domain-specific applications.",
+      "Built AI coaching infrastructure for Cri, an AI leadership and performance coaching platform, working on LLM-powered agent systems and production AI workflows.",
+      "Developed LLM evaluation and LLM-as-a-Judge pipelines that score conversational AI across multiple quality dimensions, enabling systematic benchmarking of AI-generated outputs.",
+      "Built synthetic client simulation agents that generate realistic coaching scenarios to test agent behavior, conversation quality, reliability, and edge cases.",
+      "Trained, fine-tuned, and benchmarked small language models on domain-specific tasks.",
+    ],
+  },
+  {
+    company: "Indian Institute of Information Technology Kottayam",
+    role: "Research Intern · MINDS Research Lab",
+    period: "May 2026 – Jul 2026",
+    place: "Remote",
+    points: [
+      "Investigated patient monitoring and caregiver support needs for a Big Data Analytics in Healthcare research project and translated them into mobile application requirements.",
+      "Contributed to the system architecture and database design for a lightweight mobile application that supports medication schedules, patient location monitoring, and emergency notifications.",
     ],
   },
 ];

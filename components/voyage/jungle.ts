@@ -22,13 +22,23 @@ function rng(seed: number) {
 export type Env = { tod: number; night: number; warm: number };
 
 /** Where the trail runs, in 0–1 screen coordinates. Shared with the HTML markers. */
-export function trailLayout(n: number, mobile: boolean) {
-  const peakY = mobile ? 0.25 : 0.14;
-  const top = mobile ? 0.42 : 0.34;
-  const bottom = mobile ? 0.8 : 0.78;
+/** The two summits of the Current, in 0–1 screen coordinates. */
+export function twinPeaks(mobile: boolean) {
+  const y = trailLayout(3, mobile, 1).peakY;
+  const dx = 0.5 * (mobile ? 0.62 : 0.4);
+  return [{ x: 0.5 - dx, y }, { x: 0.5 + dx, y }];
+}
+
+/** How high each island's peak rises (screen fraction from the top), I → VII. */
+const PEAK = [0.27, 0.19, 0.23, 0.14, 0.1, 0.22, 0.29];
+export function trailLayout(n: number, mobile: boolean, island = 3) {
+  // on phones the peaks vary less, so the cards always have room
+  const peakY = mobile ? 0.24 + (PEAK[island] - 0.14) * 0.45 : PEAK[island];
+  const top = peakY + (mobile ? 0.14 : 0.19);
+  const bottom = mobile ? 0.84 : 0.8;
   const stops = Array.from({ length: n }, (_, k) => {
     const y = bottom - (k * (bottom - top)) / Math.max(1, n - 1);
-    const w = (mobile ? 0.12 : 0.06) + (y - peakY) * (mobile ? 0.3 : 0.36);
+    const w = mobile ? 0.39 : 0.2 + 0.05 * ((y - top) / (bottom - top));
     return { x: 0.5 + (k % 2 ? 1 : -1) * w, y };
   });
   const summit = { x: 0.5, y: peakY + (mobile ? 0.035 : 0.035) };
@@ -43,6 +53,18 @@ export function trailLayout(n: number, mobile: boolean) {
   return { stops, summit, d, peakY, extra: mobile ? { x: 0.86, y: 0.62 } : { x: 0.9, y: 0.62 } };
 }
 
+/** Each island's skyline: gaussian bumps [centre, width, height], the one at 0 is the summit. */
+const SHAPES: Record<IslandKind, [number, number, number][]> = {
+  shallows: [[0, 0.42, 1], [-0.62, 0.34, 0.62], [0.58, 0.3, 0.5]],
+  // two peaks side by side: one for each internship
+  arches: [[-0.5, 0.2, 1], [0.5, 0.2, 1], [0, 0.42, 0.42], [-1.1, 0.25, 0.35], [1.1, 0.25, 0.3]],
+  reef: [[0, 0.22, 1], [-0.42, 0.3, 0.58], [0.5, 0.24, 0.46]],
+  village: [[0, 0.2, 1], [0, 0.62, 0.62], [0.36, 0.11, 0.74], [-0.62, 0.22, 0.4], [1.05, 0.3, 0.22]],
+  summit: [[0, 0.13, 1], [0, 0.5, 0.5], [-0.46, 0.2, 0.36], [0.42, 0.17, 0.32]],
+  fire: [[0, 0.36, 1], [-0.58, 0.3, 0.62], [0.62, 0.34, 0.5]],
+  dock: [[0, 0.5, 1], [0.62, 0.3, 0.42], [-0.7, 0.3, 0.35]],
+};
+
 type Palm = { x: number; y: number; h: number; lean: number; s: number; ph: number };
 type Cloud = { x: number; y: number; w: number; blobs: { dx: number; dy: number; r: number }[]; sp: number };
 
@@ -56,6 +78,10 @@ export class JungleScene {
   private t0 = performance.now();
   private layer: HTMLCanvasElement | null = null;
   private lagoon: Path2D | null = null;
+  private lag: Path2D | null = null;
+  private lagoonPath() {
+    return this.lag;
+  }
   private palms: Palm[] = [];
   private clouds: Cloud[] = [];
   private huts: { x: number; y: number; s: number }[] = [];
@@ -105,7 +131,7 @@ export class JungleScene {
 
   /* ---------- geometry ---------- */
   private peakTop() {
-    return this.H * trailLayout(3, this.mobile).peakY;
+    return this.H * trailLayout(3, this.mobile, this.seed).peakY;
   }
   private mountainY(x: number) {
     const { W, H } = this;
@@ -113,12 +139,9 @@ export class JungleScene {
     const peak = this.peakTop();
     const base = H * 0.66;
     const u = (x - cx) / (W * (this.mobile ? 0.62 : 0.4));
-    const spire = Math.exp(-Math.pow(u / 0.2, 2));
-    const body = 0.62 * Math.exp(-Math.pow(u / 0.62, 2));
-    const twin = 0.74 * Math.exp(-Math.pow((u - 0.36) / 0.11, 2));
-    const shoulder = 0.4 * Math.exp(-Math.pow((u + 0.62) / 0.22, 2));
-    const far = 0.22 * Math.exp(-Math.pow((u - 1.05) / 0.3, 2));
-    let h = Math.max(spire, body, twin, shoulder, far);
+    const bumps = SHAPES[this.kind];
+    let h = 0;
+    for (const [c, w, a] of bumps) h = Math.max(h, a * Math.exp(-Math.pow((u - c) / w, 2)));
     h *= 1 + 0.04 * Math.sin(x * 0.045) + 0.025 * Math.sin(x * 0.11 + 2) + 0.012 * Math.sin(x * 0.27);
     return base - (base - peak) * h;
   }
@@ -521,7 +544,7 @@ export class JungleScene {
     g.stroke();
     if (this.kind === "summit") this.glow(g, cx, this.peakTop() + 10, W * 0.14, "255,205,110", 0.5);
     if (this.kind === "arches") {
-      const fx = cx + W * (this.mobile ? 0.12 : 0.085);
+      const fx = cx + W * (this.mobile ? 0.04 : 0.02);
       const fy = this.mountainY(fx) + 30;
       const fb = H * 0.66;
       const fg = g.createLinearGradient(fx - 10, 0, fx + 10, 0);
@@ -571,6 +594,7 @@ export class JungleScene {
     lag.lineTo(W + pad, H + pad);
     lag.closePath();
     this.lagoon = lag;
+    this.lag = lag;
     const sand = new Path2D();
     sand.moveTo(-pad, H + pad);
     for (let x = -pad; x <= W + pad; x += 6) sand.lineTo(x, this.treeLineY(x));
@@ -612,6 +636,86 @@ export class JungleScene {
       else g.lineTo(x, y);
     }
     g.stroke();
+
+    // things only this island has
+    if (this.kind === "shallows") {
+      // sandbars and a tiny palm islet in the lagoon
+      for (const [u, v, w] of [[0.62, 0.9, 0.08], [0.85, 0.84, 0.06], [0.5, 0.97, 0.05]] as const) {
+        const x = W * u, y = H * v;
+        g.fillStyle = this.c("#bff0e6", "#1e4a52");
+        g.beginPath();
+        g.ellipse(x, y, W * w * 1.3, H * 0.02, 0, 0, TAU);
+        g.fill();
+        g.fillStyle = this.c("#f4e8c8", "#2a3236", "#f0c8a0");
+        g.beginPath();
+        g.ellipse(x, y, W * w, H * 0.011, 0, 0, TAU);
+        g.fill();
+      }
+      this.palm(g, { x: W * 0.85, y: H * 0.84, h: 60 * s, lean: 18 * s, s: s * 0.6, ph: 1 }, 0);
+    }
+    if (this.kind === "reef") {
+      // coral gardens under the clear water, and the reef's line of surf
+      g.save();
+      if (this.lagoonPath()) g.clip(this.lagoonPath()!);
+      const cols = ["255,120,150", "255,170,90", "180,120,230", "120,230,200", "255,210,120"];
+      for (let k = 0; k < 160; k++) {
+        const x = W * (0.3 + r() * 0.75), y = H * (0.8 + r() * 0.2);
+        if (y < this.shoreY(x) + 14) continue;
+        g.fillStyle = `rgba(${cols[k % 5]},${0.25 + 0.25 * (1 - n)})`;
+        g.beginPath();
+        g.ellipse(x, y, (5 + r() * 14) * s, (3 + r() * 6) * s, r(), 0, TAU);
+        g.fill();
+      }
+      g.restore();
+    }
+    if (this.kind === "arches") {
+      // a great sea arch standing in the lagoon
+      const ax = W * (this.mobile ? 0.8 : 0.84), ay = H * 0.88, aw = W * (this.mobile ? 0.22 : 0.13), ah = H * 0.2;
+      const rock = new Path2D();
+      rock.moveTo(ax - aw / 2, ay);
+      rock.bezierCurveTo(ax - aw * 0.6, ay - ah * 0.8, ax - aw * 0.3, ay - ah * 1.05, ax, ay - ah);
+      rock.bezierCurveTo(ax + aw * 0.35, ay - ah * 1.02, ax + aw * 0.62, ay - ah * 0.7, ax + aw / 2, ay);
+      rock.lineTo(ax + aw * 0.22, ay);
+      rock.bezierCurveTo(ax + aw * 0.2, ay - ah * 0.55, ax - aw * 0.18, ay - ah * 0.6, ax - aw * 0.22, ay);
+      rock.closePath();
+      const rg2 = g.createLinearGradient(ax - aw / 2, 0, ax + aw / 2, 0);
+      rg2.addColorStop(0, this.c("#4a5a52", "#0c1416", "#5a4a44"));
+      rg2.addColorStop(1, this.c("#8a9a88", "#1c2a30", "#b08a70"));
+      g.fillStyle = rg2;
+      g.fill(rock);
+      g.save();
+      g.clip(rock);
+      for (let k = 0; k < 160; k++) {
+        const x = ax + (r() - 0.5) * aw, y = ay - r() * ah;
+        if (y > ay - ah * 0.82) continue;
+        g.fillStyle = dabCols[Math.floor(r() * 4)];
+        g.beginPath();
+        g.arc(x, y, (1.5 + r() * 3) * s, 0, TAU);
+        g.fill();
+      }
+      g.restore();
+      g.strokeStyle = this.c("#ffffff", "#7a9aa8");
+      g.lineWidth = 2;
+      g.beginPath();
+      g.ellipse(ax - aw * 0.36, ay, aw * 0.18, 3, 0, 0, TAU);
+      g.ellipse(ax + aw * 0.36, ay, aw * 0.18, 3, 0, 0, TAU);
+      g.stroke();
+    }
+    if (this.kind === "dock") {
+      // crates and barrels waiting on the beach
+      for (let k = 0; k < 5; k++) {
+        const x = W * (0.5 + k * 0.025), y = this.treeLineY(W * 0.5) + (34 + (k % 2) * 8) * s;
+        g.fillStyle = this.c(k % 2 ? "#8a6234" : "#6a4a2e", "#0c1114");
+        if (k % 2) {
+          g.beginPath();
+          g.ellipse(x, y - 9 * s, 7 * s, 10 * s, 0, 0, TAU);
+          g.fill();
+        } else g.fillRect(x - 9 * s, y - 16 * s, 18 * s, 16 * s);
+        g.strokeStyle = this.c("#4a3220", "#070a0c");
+        g.lineWidth = 1;
+        g.strokeRect(x - 9 * s, y - 16 * s, 18 * s, 16 * s);
+      }
+    }
 
     // huts on the beach
     this.huts = [];
@@ -664,6 +768,77 @@ export class JungleScene {
     });
     this.motes = Array.from({ length: 50 }, () => ({ x: rp(), y: 0.3 + rp() * 0.65, r: 0.8 + rp() * 1.6, ph: rp() * TAU, sp: 0.2 + rp() * 0.6 }));
     this.layer = c;
+  }
+
+
+  /** The sea creeping up over the view: each island sits lower than the last. */
+  private drawSea(t: number, sink: number, s: number) {
+    const g = this.g;
+    const { W, H } = this;
+    const n = this.env.night;
+    const top = H * (1.03 - 0.36 * sink) + Math.sin(t * 0.9) * 4 * sink;
+    const edge = (x: number) => top + Math.sin(x * 0.011 + t * 1.2) * 7 * s + Math.sin(x * 0.029 - t * 1.9) * 3.5 * s;
+    const path = new Path2D();
+    path.moveTo(-10, H + 10);
+    for (let x = -10; x <= W + 10; x += 8) path.lineTo(x, edge(x));
+    path.lineTo(W + 10, H + 10);
+    path.closePath();
+    const sg = g.createLinearGradient(0, top - 10, 0, H);
+    sg.addColorStop(0, this.c("#3fb0c8", "#123444", "#c08a86"));
+    sg.addColorStop(0.25, mix("#1d7c98", "#0a2232", n));
+    sg.addColorStop(1, mix("#0b3c55", "#04121c", n));
+    g.globalAlpha = 0.82 + 0.12 * sink;
+    g.fillStyle = sg;
+    g.fill(path);
+    g.globalAlpha = 1;
+    g.save();
+    g.clip(path);
+    // looking up through the water: light shafts and rising bubbles once we're deep enough
+    if (sink > 0.5) {
+      g.globalCompositeOperation = "lighter";
+      for (let k = 0; k < 6; k++) {
+        const x0 = W * (0.1 + k * 0.16) + Math.sin(t * 0.3 + k) * 30;
+        const rg = g.createLinearGradient(0, top, 0, H);
+        rg.addColorStop(0, `rgba(170,240,245,${0.08 * sink * (1 - n * 0.6)})`);
+        rg.addColorStop(1, "rgba(170,240,245,0)");
+        g.fillStyle = rg;
+        g.beginPath();
+        g.moveTo(x0, top);
+        g.lineTo(x0 + 30, top);
+        g.lineTo(x0 + 110, H);
+        g.lineTo(x0 + 40, H);
+        g.fill();
+      }
+      g.globalCompositeOperation = "source-over";
+      g.strokeStyle = "rgba(220,250,255,0.45)";
+      g.lineWidth = 1;
+      for (let k = 0; k < 22; k++) {
+        const life = (t * (0.15 + (k % 5) * 0.03) + k * 0.13) % 1;
+        const x = W * ((k * 0.137) % 1) + Math.sin(t * 2 + k) * 6;
+        const y = H - life * (H - top);
+        g.beginPath();
+        g.arc(x, y, 1.5 + (k % 3), 0, TAU);
+        g.stroke();
+      }
+    }
+    for (let k = 0; k < 40; k++) {
+      const x = (k * 71.3) % W;
+      const y = top + 8 + ((k * 37) % 60);
+      const a = Math.max(0, Math.sin(t * 2.4 + k * 1.9)) * 0.45;
+      g.fillStyle = `rgba(${this.lit},${a})`;
+      g.fillRect(x, y, 10 + (k % 3) * 8, 1.3);
+    }
+    g.restore();
+    // the bright line of the surface
+    g.strokeStyle = `rgba(235,252,255,${0.6 + 0.3 * sink})`;
+    g.lineWidth = 2;
+    g.beginPath();
+    for (let x = -10; x <= W + 10; x += 8) {
+      const y = edge(x);
+      if (x === -10) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.stroke();
   }
 
   /* ---------- every frame ---------- */
@@ -815,7 +990,9 @@ export class JungleScene {
     }
     g.restore();
 
-    // foreground frame: big leaves and hibiscus in the corners
+    // foreground frame: big leaves and hibiscus in the corners (they fade as we sink)
+    const sink = clamp((this.seed - 1) / 5, 0, 1);
+    g.globalAlpha = 1 - sink * 0.75;
     const fx = -this.sm.x * 30, fy = -this.sm.y * 14;
     const leafC = this.c("#2b7a3e", "#06140f", "#4a5a2a");
     const sway = (k: number) => Math.sin(t * 0.8 + k) * 0.035;
@@ -831,6 +1008,9 @@ export class JungleScene {
     this.hibiscus(g, W * 0.1 + fx, H * 0.9 + fy, fr, -0.6 + sway(8) * 2);
     this.hibiscus(g, W * 0.02 + fx, H * 0.95 + fy, fr * 0.8, 1.2);
     this.hibiscus(g, W * 0.96 + fx, H * 0.93 + fy, fr * 0.85, 0.9 + sway(9) * 2);
+
+    g.globalAlpha = 1;
+    if (sink > 0) this.drawSea(t, sink, s);
 
     // vignette
     const vg = g.createRadialGradient(W / 2, H * 0.5, Math.min(W, H) * 0.35, W / 2, H * 0.5, Math.max(W, H) * 0.8);
