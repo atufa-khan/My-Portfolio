@@ -22,12 +22,20 @@ export const education = {
   degree: "B.Tech in Computer Science & Engineering — AI & ML",
   years: "2023 – 2027",
   cgpa: "9.1 / 10",
+  honor: "Gold Medalist",
   coursework: [
     "Brain-Computer Interface",
     "Natural Language Processing",
     "Pattern Recognition",
     "Machine Learning with AWS",
+    "Deep Learning",
+    "Computer Vision",
+    "Soft Computing",
+    "Human-Computer Interaction",
+    "Generative AI",
   ],
+  /** Courses where Atufa came first across all sections. */
+  firsts: ["Brain-Computer Interface", "Natural Language Processing", "Pattern Recognition"],
 };
 
 export const experience = [

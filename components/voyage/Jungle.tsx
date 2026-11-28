@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { JungleScene, trailLayout, multiPeaks, type Env } from "./jungle";
-import { experience, profile, projects, publications } from "@/lib/data";
+import { education, experience, profile, projects, publications } from "@/lib/data";
 import { chapters } from "@/lib/story";
 import { trails, type Find } from "@/lib/jungle";
 
@@ -16,8 +16,9 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
   const [found, setFound] = useState<Set<Key>>(new Set());
   const [leaving, setLeaving] = useState(false);
   const ch = chapters[index];
-  const twin = index === 1 || index === 2 || index === 3; // islands without the trail
+  const twin = index <= 3; // islands without the trail
   const [huts, setHuts] = useState<{ x: number; y: number; s: number }[]>([]);
+  const [light, setLight] = useState<{ L: JungleScene["light"]; buoys: JungleScene["buoys"] }>({ L: null, buoys: [] });
   const trail = trails[index];
   const layout = useMemo(() => trailLayout(trail.stops.length, mobile, index), [trail.stops.length, mobile, index]);
 
@@ -26,8 +27,12 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
     m();
     const scene = new JungleScene(canvasRef.current!, ch.kind, env, index);
     sceneRef.current = scene;
-    scene.onLayout = () => setHuts([...scene.hutAnchors]);
-    setHuts([...scene.hutAnchors]);
+    const sync = () => {
+      setHuts([...scene.hutAnchors]);
+      setLight({ L: scene.light, buoys: [...scene.buoys] });
+    };
+    scene.onLayout = sync;
+    sync();
     const onResize = () => {
       m();
       scene.resize();
@@ -68,6 +73,7 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
 
       {(index === 1 || index === 2) && <Summits mobile={mobile} island={index} />}
       {index === 3 && <Village mobile={mobile} huts={huts} />}
+      {index === 0 && <Lighthouse mobile={mobile} light={light.L} buoys={light.buoys} />}
 
       {!twin && (<>
       {/* the trail up the mountain */}
@@ -85,7 +91,7 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
         </p>
         <h2 className="mt-2 font-display text-4xl leading-[1] text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] md:text-6xl">{ch.title}</h2>
         <p className="mt-3 text-sm text-white/80 [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
-          {index === 1 ? "Two summits, two internships" : index === 2 ? "Three summits, five papers" : index === 3 ? "Five huts, five projects" : "Follow the trail to the summit ↑"}
+          {index === 0 ? "Where it all started" : index === 1 ? "Two summits, two internships" : index === 2 ? "Three summits, five papers" : index === 3 ? "Five huts, five projects" : "Follow the trail to the summit ↑"}
         </p>
       </div>
 
@@ -165,7 +171,7 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
 
       </>)}
       {/* a hidden extra in the foliage */}
-      {trail.extra && (
+      {trail.extra && !twin && (
         <button
           type="button"
           onClick={(e) => {
@@ -404,6 +410,82 @@ function Village({ mobile, huts }: { mobile: boolean; huts: { x: number; y: numb
             <Card k={k} />
           </div>
         ))
+      )}
+    </>
+  );
+}
+
+
+/** Island I: the lighthouse is Sharda University; coursework floats as buoys in the bay. */
+function Lighthouse({ mobile, light, buoys }: { mobile: boolean; light: JungleScene["light"]; buoys: JungleScene["buoys"] }) {
+  if (!light) return null;
+  const isFirst = (c: string) => education.firsts.includes(c);
+  const card = (
+    <div className="intern-card rounded-md bg-[#06201c]/88 p-5 text-white ring-1 ring-white/20 backdrop-blur-xl md:p-6" style={{ "--d": "1.1s" } as CSSProperties}>
+      <p className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">Port of departure</p>
+      <h3 className="mt-1 font-display text-3xl leading-tight md:text-[34px]">{education.school}</h3>
+      <p className="mt-1 text-[15px] font-medium text-white/90">{education.degree}</p>
+      <p className="mt-0.5 text-[13px] text-white/65">
+        {education.years} · {education.place}
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-sm bg-white/[0.06] p-3 ring-1 ring-white/10">
+          <p className="font-display text-3xl leading-none text-gold">9.1</p>
+          <p className="mt-1 text-xs text-white/70">CGPA · {education.honor}</p>
+        </div>
+        <div className="rounded-sm bg-white/[0.06] p-3 ring-1 ring-white/10">
+          <p className="font-display text-3xl leading-none text-gold">1st</p>
+          <p className="mt-1 text-xs text-white/70">across all sections in 3 subjects</p>
+        </div>
+      </div>
+      {mobile && (
+        <div className="mt-4">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-white/55 uppercase">Coursework</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {education.coursework.map((c) => (
+              <span key={c} className={`rounded-sm px-2 py-0.5 text-[12px] ring-1 ${isFirst(c) ? "bg-gold text-[#1a1206] ring-gold" : "bg-white/10 text-white/85 ring-white/15"}`}>
+                {isFirst(c) && "★ "}
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <>
+      {/* gold medals on the railing */}
+      <div className="hut-sign pointer-events-none" style={{ left: light.x, top: light.rail + 48 * light.s, "--d": "0.9s", fontSize: mobile ? 11 : 15 } as CSSProperties}>
+        4× Gold Medalist
+      </div>
+      {mobile ? (
+        <div className="absolute inset-x-3 bottom-[78px] z-10 overflow-y-auto overscroll-contain pb-2" style={{ top: `${light.base + 14}px` }}>
+          {card}
+        </div>
+      ) : (
+        <>
+          <div
+            className="summit-card-wrap absolute z-10 overflow-y-auto overscroll-contain rounded-md"
+            style={{ width: "min(400px, 30vw)", right: 24, top: light.base + 18, maxHeight: `calc(100% - ${light.base + 18}px - 24px)` }}
+          >
+            {card}
+          </div>
+          {buoys.map((b, k) => {
+            const c = education.coursework[k];
+            const first = isFirst(c);
+            return (
+              <div
+                key={c}
+                className={`buoy-label ${first ? "buoy-gold" : ""}`}
+                style={{ left: b.x, top: b.y - 34 * light.s, "--d": `${1.2 + k * 0.08}s` } as CSSProperties}
+              >
+                {first && <span className="mr-1">★</span>}
+                {c}
+              </div>
+            );
+          })}
+        </>
       )}
     </>
   );

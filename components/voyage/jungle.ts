@@ -89,6 +89,9 @@ export class JungleScene {
   private huts: { x: number; y: number; s: number }[] = [];
   /** Village huts in screen pixels, one per project, so the page can hang signs on them. */
   hutAnchors: { x: number; y: number; s: number }[] = [];
+  /** Island I: the lighthouse (lamp, gallery and base, in pixels) and the buoys in the bay. */
+  light: { x: number; lamp: number; rail: number; base: number; s: number } | null = null;
+  buoys: { x: number; y: number; gold: boolean }[] = [];
   onLayout?: () => void;
   private motes: { x: number; y: number; r: number; ph: number; sp: number }[] = [];
   private mx = 0;
@@ -153,6 +156,7 @@ export class JungleScene {
   private shoreY(x: number) {
     const { W, H } = this;
     const u = x / W;
+    if (this.kind === "shallows") return H * ((this.mobile ? 0.6 : 0.68) + 0.025 * Math.sin(u * Math.PI * 1.4 + 0.4) + 0.006 * Math.sin(x * 0.02));
     // a curving bay: the beach sweeps from lower left round to the right
     return H * (0.9 - 0.16 * Math.sin(clamp((u - 0.28) / 0.72, 0, 1) * Math.PI * 0.62) + 0.01 * Math.sin(x * 0.02));
   }
@@ -643,21 +647,7 @@ export class JungleScene {
     g.stroke();
 
     // things only this island has
-    if (this.kind === "shallows") {
-      // sandbars and a tiny palm islet in the lagoon
-      for (const [u, v, w] of [[0.62, 0.9, 0.08], [0.85, 0.84, 0.06], [0.5, 0.97, 0.05]] as const) {
-        const x = W * u, y = H * v;
-        g.fillStyle = this.c("#bff0e6", "#1e4a52");
-        g.beginPath();
-        g.ellipse(x, y, W * w * 1.3, H * 0.02, 0, 0, TAU);
-        g.fill();
-        g.fillStyle = this.c("#f4e8c8", "#2a3236", "#f0c8a0");
-        g.beginPath();
-        g.ellipse(x, y, W * w, H * 0.011, 0, 0, TAU);
-        g.fill();
-      }
-      this.palm(g, { x: W * 0.85, y: H * 0.84, h: 60 * s, lean: 18 * s, s: s * 0.6, ph: 1 }, 0);
-    }
+    if (this.kind === "shallows") this.paintLighthouse(g, s);
     if (this.kind === "reef") {
       // coral gardens under the clear water, and the reef's line of surf
       g.save();
@@ -781,6 +771,7 @@ export class JungleScene {
     const palmXs = this.mobile ? [0.05, 0.36, 0.72, 0.95] : [0.04, 0.2, 0.36, 0.5, 0.68, 0.78, 0.96];
     for (const u of palmXs) {
       if (this.kind === "village" && this.hutAnchors.some((h) => Math.abs(h.x / W - u) < 0.06)) continue;
+      if (this.kind === "shallows" && u > (this.mobile ? 0.62 : 0.66)) continue;
       const x = W * (u + (rp() - 0.5) * 0.03);
       this.palms.push({ x, y: this.treeLineY(x) + (12 + rp() * 22) * s, h: (130 + rp() * 90) * s, lean: (u < 0.5 ? -1 : 1) * (25 + rp() * 35) * s, s, ph: rp() * TAU });
     }
@@ -869,6 +860,211 @@ export class JungleScene {
     g.stroke();
   }
 
+
+  /* ---------- Island I: the lighthouse on the point ---------- */
+  private paintLighthouse(g: CanvasRenderingContext2D, s: number) {
+    const { W, H } = this;
+    const m = this.mobile;
+    const x = W * (m ? 0.8 : 0.84);
+    const base = H * (m ? 0.5 : 0.56);
+    const towerH = H * (m ? 0.2 : 0.3);
+    const ls = m ? 0.8 : clamp(W / 1440, 0.8, 1.3);
+    // rocky headland rising out of the bay
+    const rock = new Path2D();
+    rock.moveTo(W * (m ? 0.56 : 0.66), H + 10);
+    rock.bezierCurveTo(W * (m ? 0.6 : 0.7), H * 0.82, W * (m ? 0.66 : 0.74), base + 30 * ls, x - 70 * ls, base + 6 * ls);
+    rock.quadraticCurveTo(x, base - 12 * ls, x + 80 * ls, base + 4 * ls);
+    rock.bezierCurveTo(W * 0.96, base + 20 * ls, W + 20, H * 0.62, W + 20, H * 0.7);
+    rock.lineTo(W + 20, H + 10);
+    rock.closePath();
+    const rg = g.createLinearGradient(W * 0.7, 0, W, 0);
+    rg.addColorStop(0, this.c("#5e6560", "#0c1316", "#5a4a44"));
+    rg.addColorStop(1, this.c("#9a9b8a", "#1c262a", "#b08a70"));
+    g.fillStyle = rg;
+    g.fill(rock);
+    g.save();
+    g.clip(rock);
+    const r = rng(77);
+    for (let k = 0; k < 140; k++) {
+      const px = W * (0.66 + r() * 0.36), py = base + r() * (H - base);
+      g.strokeStyle = `rgba(30,35,35,${0.15 + r() * 0.2})`;
+      g.lineWidth = 1 + r() * 2;
+      g.beginPath();
+      g.moveTo(px, py);
+      g.lineTo(px + (r() - 0.5) * 30 * ls, py + 8 + r() * 30 * ls);
+      g.stroke();
+    }
+    // a cap of grass on top
+    g.fillStyle = this.c("#5a9a48", "#0d2026", "#7a6a40");
+    g.beginPath();
+    g.ellipse(x, base + 4 * ls, 120 * ls, 16 * ls, 0, Math.PI, 0);
+    g.fill();
+    g.restore();
+    // surf where the rock meets the water
+    g.strokeStyle = "rgba(255,255,255,0.75)";
+    g.lineWidth = 2;
+    g.beginPath();
+    for (let px = W * (m ? 0.58 : 0.68); px < W; px += 10) g.lineTo(px, H * (m ? 0.86 : 0.88) + Math.sin(px * 0.05) * 3);
+    g.stroke();
+
+    // the tower: tapered, red and white bands
+    const bw = 30 * ls, tw = 20 * ls, top = base - towerH;
+    const tower = new Path2D();
+    tower.moveTo(x - bw, base);
+    tower.lineTo(x - tw, top);
+    tower.lineTo(x + tw, top);
+    tower.lineTo(x + bw, base);
+    tower.closePath();
+    g.fillStyle = this.c("#f7f3ea", "#5a6670", "#f6d8c4");
+    g.fill(tower);
+    g.save();
+    g.clip(tower);
+    g.fillStyle = this.c("#c8443a", "#3a2a32", "#c8504a");
+    const bands = 5;
+    for (let k = 0; k < bands; k++) {
+      if (k % 2) continue;
+      g.fillRect(x - bw, top + (towerH / bands) * k, bw * 2, towerH / bands);
+    }
+    const sh = g.createLinearGradient(x - bw, 0, x + bw, 0);
+    sh.addColorStop(0, "rgba(0,0,0,0.28)");
+    sh.addColorStop(0.55, "rgba(0,0,0,0)");
+    sh.addColorStop(1, "rgba(255,255,255,0.18)");
+    g.fillStyle = sh;
+    g.fillRect(x - bw, top, bw * 2, towerH);
+    g.restore();
+    // windows and door
+    g.fillStyle = this.c("#2a3a44", "#0a1014");
+    for (const f of [0.3, 0.6]) g.fillRect(x - 3 * ls, top + towerH * f, 6 * ls, 9 * ls);
+    g.beginPath();
+    g.moveTo(x - 7 * ls, base);
+    g.lineTo(x - 7 * ls, base - 14 * ls);
+    g.arc(x, base - 14 * ls, 7 * ls, Math.PI, 0);
+    g.lineTo(x + 7 * ls, base);
+    g.fill();
+    // gallery with railing
+    const rail = top - 4 * ls;
+    g.fillStyle = this.c("#2d3438", "#0a0f12");
+    g.fillRect(x - tw - 12 * ls, top - 4 * ls, (tw + 12 * ls) * 2, 5 * ls);
+    g.strokeStyle = this.c("#2d3438", "#0a0f12");
+    g.lineWidth = 1.4 * ls;
+    g.beginPath();
+    g.moveTo(x - tw - 12 * ls, rail - 9 * ls);
+    g.lineTo(x + tw + 12 * ls, rail - 9 * ls);
+    for (let k = 0; k <= 8; k++) {
+      const px = x - tw - 12 * ls + (k / 8) * (tw + 12 * ls) * 2;
+      g.moveTo(px, rail);
+      g.lineTo(px, rail - 9 * ls);
+    }
+    g.stroke();
+    // lantern room and dome
+    const lamp = rail - 22 * ls;
+    g.fillStyle = "rgba(255,236,170,0.95)";
+    g.fillRect(x - 13 * ls, rail - 34 * ls, 26 * ls, 25 * ls);
+    g.strokeStyle = this.c("#2d3438", "#0a0f12");
+    g.lineWidth = 1.5 * ls;
+    g.strokeRect(x - 13 * ls, rail - 34 * ls, 26 * ls, 25 * ls);
+    for (const f of [-1, 0, 1]) {
+      g.beginPath();
+      g.moveTo(x + f * 6 * ls, rail - 34 * ls);
+      g.lineTo(x + f * 6 * ls, rail - 9 * ls);
+      g.stroke();
+    }
+    g.fillStyle = this.c("#c8443a", "#3a2a32", "#c8504a");
+    g.beginPath();
+    g.moveTo(x - 17 * ls, rail - 34 * ls);
+    g.quadraticCurveTo(x, rail - 58 * ls, x + 17 * ls, rail - 34 * ls);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = this.c("#2d3438", "#0a0f12");
+    g.beginPath();
+    g.moveTo(x, rail - 50 * ls);
+    g.lineTo(x, rail - 62 * ls);
+    g.stroke();
+    this.light = { x, lamp, rail, base, s: ls };
+
+    // buoys in the bay, one per course
+    const n = 9;
+    const xs = m ? [0.1, 0.27, 0.44, 0.1, 0.27, 0.44, 0.61, 0.18, 0.36] : [0.16, 0.36, 0.56, 0.22, 0.42, 0.62, 0.2, 0.4, 0.6];
+    const ys = m ? [0.66, 0.66, 0.66, 0.74, 0.74, 0.74, 0.7, 0.82, 0.82] : [0.76, 0.76, 0.76, 0.85, 0.85, 0.85, 0.94, 0.94, 0.94];
+    this.buoys = Array.from({ length: n }, (_, k) => ({ x: W * xs[k], y: H * ys[k], gold: k < 3 }));
+  }
+
+  private animateLighthouse(t: number) {
+    const L = this.light;
+    if (!L) return;
+    const g = this.g;
+    const { W, H } = this;
+    const n = this.env.night;
+    // the beam sweeps slowly across the bay
+    const ang = Math.PI + 0.55 * Math.sin(t * 0.45) - 0.15;
+    const len = W * 0.95;
+    const spread = 0.13;
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    const bg = g.createRadialGradient(L.x, L.lamp, 0, L.x, L.lamp, len);
+    const a = 0.22 + 0.28 * n;
+    bg.addColorStop(0, `rgba(255,240,190,${a})`);
+    bg.addColorStop(0.6, `rgba(255,240,190,${a * 0.35})`);
+    bg.addColorStop(1, "rgba(255,240,190,0)");
+    g.fillStyle = bg;
+    g.beginPath();
+    g.moveTo(L.x, L.lamp);
+    g.arc(L.x, L.lamp, len, ang - spread, ang + spread);
+    g.closePath();
+    g.fill();
+    g.restore();
+    this.glow(g, L.x, L.lamp, 60 * L.s, "255,236,170", 0.55 + 0.25 * Math.sin(t * 3));
+    // gold medal pennants fluttering on the railing
+    const span = 34 * L.s;
+    for (let k = 0; k < 4; k++) {
+      const px = L.x - span + (k / 3) * span * 2;
+      const py = L.rail - 9 * L.s;
+      const fl = Math.sin(t * 4 + k * 1.3) * 3 * L.s;
+      g.fillStyle = "#e9c46a";
+      g.strokeStyle = "#a8781f";
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.moveTo(px - 5 * L.s, py);
+      g.lineTo(px + 5 * L.s, py);
+      g.lineTo(px + fl, py + 15 * L.s);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    }
+    // the buoys bob in the swell
+    for (const [k, b] of this.buoys.entries()) {
+      const bob = Math.sin(t * 1.6 + k) * 2;
+      const x = b.x, y = b.y + bob;
+      const r = (this.mobile ? 6 : 9) * clamp(W / 1440, 0.8, 1.3);
+      g.fillStyle = "rgba(0,40,50,0.25)";
+      g.beginPath();
+      g.ellipse(x, y + r * 0.9, r * 1.6, r * 0.45, 0, 0, TAU);
+      g.fill();
+      g.fillStyle = b.gold ? "#e9c46a" : "#d9493c";
+      g.beginPath();
+      g.arc(x, y, r, Math.PI, 0);
+      g.lineTo(x + r * 0.7, y + r * 0.6);
+      g.lineTo(x - r * 0.7, y + r * 0.6);
+      g.closePath();
+      g.fill();
+      g.fillStyle = "#fff";
+      g.fillRect(x - r, y - r * 0.15, r * 2, r * 0.3);
+      g.strokeStyle = "#333";
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.moveTo(x, y - r);
+      g.lineTo(x, y - r * 1.9);
+      g.stroke();
+      const on = 0.5 + 0.5 * Math.sin(t * 2.5 + k * 0.7);
+      this.glow(g, x, y - r * 2, r * 1.6, b.gold ? "255,220,120" : "255,170,140", 0.5 * on);
+      g.strokeStyle = `rgba(255,255,255,${0.5})`;
+      g.beginPath();
+      g.ellipse(x, y + r * 0.7, r * 1.4 + Math.sin(t * 2 + k) * 2, r * 0.3, 0, 0, TAU);
+      g.stroke();
+    }
+    void H;
+  }
+
   /* ---------- every frame ---------- */
   private frame = (now: number) => {
     this.raf = requestAnimationFrame(this.frame);
@@ -882,7 +1078,7 @@ export class JungleScene {
     this.sm.y += (this.my - this.sm.y) * 0.04;
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     // the painted layer, drifting very slightly with the cursor
-    const still = this.kind === "village" ? 0 : 1;
+    const still = this.kind === "village" || this.kind === "shallows" ? 0 : 1;
     const ox = -30 - this.sm.x * 14 * still;
     const oy = -30 - this.sm.y * 8 * still;
     g.drawImage(this.layer, ox, oy, W + 60, H + 60);
@@ -973,7 +1169,7 @@ export class JungleScene {
     if (this.kind === "dock" || n > 0.5) {
       for (const h of this.huts) this.glow(g, h.x, h.y - 24 * h.s, 30 * h.s, "255,180,90", (0.15 + 0.25 * n) * (0.85 + 0.15 * Math.sin(t * 5 + h.x)));
     }
-    if (this.kind === "reef" || this.kind === "shallows") {
+    if (this.kind === "reef") {
       for (let i = 0; i < 18; i++) {
         const x = W * (0.45 + ((i * 37) % 55) / 100);
         const y = H * (0.86 + ((i * 13) % 12) / 100);
@@ -1019,6 +1215,8 @@ export class JungleScene {
     }
     g.restore();
 
+    if (this.kind === "shallows") this.animateLighthouse(t);
+
     // foreground frame: big leaves and hibiscus in the corners (they fade as we sink)
     const sink = clamp((this.seed - 1) / 5, 0, 1);
     g.globalAlpha = 1 - sink * 0.75;
@@ -1029,8 +1227,10 @@ export class JungleScene {
     this.bigLeaf(g, -20 + fx, H * 0.86 + fy, -0.75 + sway(1), L * 0.32, 0.42, leafC);
     this.bigLeaf(g, -30 + fx, H * 0.98 + fy, -0.25 + sway(2), L * 0.38, 0.4, mix("#246a36", "#05110d", n));
     this.bigLeaf(g, W * 0.12 + fx, H + 30 + fy, -1.35 + sway(3), L * 0.3, 0.38, leafC);
-    this.bigLeaf(g, W + 20 + fx, -20 + fy, Math.PI * 0.78 + sway(4), L * 0.34, 0.36, mix("#246a36", "#05110d", n));
-    this.bigLeaf(g, W + 30 + fx, H * 0.14 + fy, Math.PI * 0.92 + sway(5), L * 0.26, 0.4, leafC);
+    if (this.kind !== "shallows") {
+      this.bigLeaf(g, W + 20 + fx, -20 + fy, Math.PI * 0.78 + sway(4), L * 0.34, 0.36, mix("#246a36", "#05110d", n));
+      this.bigLeaf(g, W + 30 + fx, H * 0.14 + fy, Math.PI * 0.92 + sway(5), L * 0.26, 0.4, leafC);
+    }
     this.bigLeaf(g, W + 30 + fx, H + 20 + fy, -Math.PI * 0.72 + sway(6), L * 0.3, 0.4, leafC);
     const fr = (this.mobile ? 28 : 46) * s;
     this.hibiscus(g, W * 0.04 + fx, H * 0.8 + fy, fr * 1.1, 0.3 + sway(7) * 2);
