@@ -61,6 +61,7 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
   return (
     <div className={`jungle absolute inset-0 z-40 ${leaving ? "jungle-out" : ""}`} onClick={() => setOpen(null)}>
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_40%_at_0%_0%,rgba(4,24,30,0.55),transparent_70%)]" />
 
       {/* the trail up the mountain */}
       <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>

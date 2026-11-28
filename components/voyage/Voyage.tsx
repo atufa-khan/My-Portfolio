@@ -146,7 +146,7 @@ export default function Voyage() {
         <div
           ref={stageRef}
           className="sea-stage absolute inset-0"
-          style={zoom ? { transformOrigin: `${zoom.x}px ${zoom.y}px`, transform: "scale(3.2)", filter: "blur(6px)", opacity: 0.2 } : undefined}
+          style={zoom ? { opacity: 0 } : undefined}
         >
           <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-label="An animated voyage across the ocean" role="img" />
         </div>
