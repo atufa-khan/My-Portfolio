@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { JungleScene, trailLayout, twinPeaks, type Env } from "./jungle";
-import { experience } from "@/lib/data";
+import { JungleScene, trailLayout, multiPeaks, type Env } from "./jungle";
+import { experience, profile, projects, publications } from "@/lib/data";
 import { chapters } from "@/lib/story";
 import { trails, type Find } from "@/lib/jungle";
 
@@ -16,7 +16,8 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
   const [found, setFound] = useState<Set<Key>>(new Set());
   const [leaving, setLeaving] = useState(false);
   const ch = chapters[index];
-  const twin = index === 1; // the Current: two peaks, one per internship
+  const twin = index === 1 || index === 2 || index === 3; // islands without the trail
+  const [huts, setHuts] = useState<{ x: number; y: number; s: number }[]>([]);
   const trail = trails[index];
   const layout = useMemo(() => trailLayout(trail.stops.length, mobile, index), [trail.stops.length, mobile, index]);
 
@@ -25,6 +26,8 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
     m();
     const scene = new JungleScene(canvasRef.current!, ch.kind, env, index);
     sceneRef.current = scene;
+    scene.onLayout = () => setHuts([...scene.hutAnchors]);
+    setHuts([...scene.hutAnchors]);
     const onResize = () => {
       m();
       scene.resize();
@@ -63,7 +66,8 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden />
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_40%_at_0%_0%,rgba(4,24,30,0.55),transparent_70%)]" />
 
-      {twin && <TwinSummits mobile={mobile} />}
+      {(index === 1 || index === 2) && <Summits mobile={mobile} island={index} />}
+      {index === 3 && <Village mobile={mobile} huts={huts} />}
 
       {!twin && (<>
       {/* the trail up the mountain */}
@@ -81,7 +85,7 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
         </p>
         <h2 className="mt-2 font-display text-4xl leading-[1] text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] md:text-6xl">{ch.title}</h2>
         <p className="mt-3 text-sm text-white/80 [text-shadow:0_1px_10px_rgba(0,0,0,0.6)]">
-          {twin ? "Two summits, two internships" : "Follow the trail to the summit ↑"}
+          {index === 1 ? "Two summits, two internships" : index === 2 ? "Three summits, five papers" : index === 3 ? "Five huts, five projects" : "Follow the trail to the summit ↑"}
         </p>
       </div>
 
@@ -232,14 +236,14 @@ export default function Jungle({ index, env, onClose }: { index: number; env: En
 }
 
 
-/** Island II: one peak per internship, the company written at the top, full details beneath. */
-function TwinSummits({ mobile }: { mobile: boolean }) {
-  const peaks = twinPeaks(mobile);
-  const Detail = ({ k }: { k: number }) => {
-    const j = experience[k];
-    return (
-      <div className="intern-card rounded-2xl bg-[#06201c]/85 p-5 text-white ring-1 ring-white/20 backdrop-blur-xl md:p-6" style={{ "--d": `${1.2 + k * 0.35}s` } as CSSProperties}>
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">{k === 0 ? "Industry internship" : "Research internship"}</p>
+type Group = { flag: string; kicker: string; body: React.ReactNode };
+
+function internships(): Group[] {
+  return experience.map((j, k) => ({
+    flag: k === 0 ? "Crink Pvt Ltd" : "IIIT Kottayam",
+    kicker: k === 0 ? "Industry internship" : "Research internship",
+    body: (
+      <>
         <h3 className="mt-1 font-display text-2xl leading-tight md:text-[28px]">{j.company}</h3>
         <p className="mt-1 text-sm font-medium text-white/90 md:text-[15px]">{j.role}</p>
         <p className="mt-0.5 text-[13px] text-white/65">
@@ -253,22 +257,63 @@ function TwinSummits({ mobile }: { mobile: boolean }) {
             </li>
           ))}
         </ul>
-      </div>
-    );
-  };
+      </>
+    ),
+  }));
+}
+
+function papers(): Group[] {
+  const groups: [string, string][] = [
+    ["Accepted", "Accepted"],
+    ["Under review", "Under Review"],
+    ["In progress", "In progress"],
+  ];
+  return groups.map(([flag, status]) => {
+    const list = publications.filter((p) => p.status === status);
+    return {
+      flag,
+      kicker: `${list.length} ${list.length === 1 ? "paper" : "papers"}`,
+      body: (
+        <ul className="mt-2 space-y-3.5">
+          {list.map((p) => (
+            <li key={p.title}>
+              <p className="font-display text-[19px] leading-snug text-white md:text-[20px]">{p.title}</p>
+              <p className="mt-1 text-[12.5px] leading-snug text-white/65">{[p.kind, p.venue, p.date].filter(Boolean).join(" · ")}</p>
+            </li>
+          ))}
+        </ul>
+      ),
+    };
+  });
+}
+
+/** Islands II and III: one peak per group, its name at the top and the full details beneath. */
+function Summits({ mobile, island }: { mobile: boolean; island: number }) {
+  const peaks = multiPeaks(mobile, island);
+  const groups = island === 1 ? internships() : papers();
+  const n = groups.length;
+  const width = n === 2 ? "min(470px,36vw)" : "min(380px,26vw)";
+  const half = n === 2 ? "min(235px,18vw)" : "min(190px,13vw)";
+  const drop = n === 2 ? "24%" : "22%";
+  const Detail = ({ k }: { k: number }) => (
+    <div className="intern-card rounded-2xl bg-[#06201c]/85 p-5 text-white ring-1 ring-white/20 backdrop-blur-xl md:p-6" style={{ "--d": `${1.2 + k * 0.3}s` } as CSSProperties}>
+      <p className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">{groups[k].kicker}</p>
+      {groups[k].body}
+    </div>
+  );
   return (
     <>
       {peaks.map((p, k) => (
         <div
           key={k}
           className="twin-flag pointer-events-none absolute z-10 flex flex-col items-center"
-          style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, "--d": `${0.8 + k * 0.3}s` } as CSSProperties}
+          style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, "--d": `${0.8 + k * 0.25}s` } as CSSProperties}
         >
           <svg viewBox="0 0 40 48" className="summit-flag h-12 w-10" aria-hidden>
             <line x1="8" y1="4" x2="8" y2="46" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
             <path className="flag-cloth" d="M9 5 C 18 2, 24 10, 36 7 L 34 21 C 24 24, 18 16, 9 19 Z" fill="#e9c46a" />
           </svg>
-          <span className="summit-label max-w-[44vw] truncate text-center md:max-w-none">{k === 0 ? "Crink Pvt Ltd" : mobile ? "IIIT Kottayam" : "IIIT Kottayam"}</span>
+          <span className="summit-label whitespace-nowrap">{groups[k].flag}</span>
         </div>
       ))}
       {!mobile &&
@@ -277,22 +322,86 @@ function TwinSummits({ mobile }: { mobile: boolean }) {
             key={`m${k}`}
             aria-hidden
             className="twin-flag pointer-events-none absolute z-[9] w-px bg-gradient-to-b from-gold/80 to-gold/0"
-            style={{ left: `${p.x * 100}%`, top: `calc(${p.y * 100}% + 50px)`, height: "calc(24% - 54px)", transform: "none", "--d": `${1 + k * 0.3}s` } as CSSProperties}
+            style={{ left: `${p.x * 100}%`, top: `calc(${p.y * 100}% + 50px)`, height: `calc(${drop} - 54px)`, transform: "none", "--d": `${1 + k * 0.25}s` } as CSSProperties}
           />
         ))}
       {mobile ? (
-        <div className="absolute inset-x-3 bottom-[78px] z-10 space-y-3 overflow-y-auto overscroll-contain pb-2" style={{ top: `calc(${peaks[0].y * 100}% + 22%)` }}>
-          <Detail k={0} />
-          <Detail k={1} />
+        <div className="absolute inset-x-3 bottom-[78px] z-10 space-y-3 overflow-y-auto overscroll-contain pb-2" style={{ top: `calc(${peaks[0].y * 100}% + 20%)` }}>
+          {groups.map((_, k) => (
+            <Detail key={k} k={k} />
+          ))}
         </div>
       ) : (
         peaks.map((p, k) => (
           <div
             key={k}
-            className="absolute z-10 w-[min(470px,36vw)]"
-            style={{ left: `clamp(16px, calc(${p.x * 100}% - min(235px, 18vw)), calc(100% - min(470px, 36vw) - 16px))`, top: `calc(${p.y * 100}% + 24%)` }}
+            className="summit-card-wrap absolute z-10 overflow-y-auto overscroll-contain rounded-2xl"
+            style={{ maxHeight: `calc(100% - ${p.y * 100}% - ${drop} - 90px)`, width, left: `clamp(16px, calc(${p.x * 100}% - ${half}), calc(100% - ${width} - 16px))`, top: `calc(${p.y * 100}% + ${drop})` }}
           >
             <Detail k={k} />
+          </div>
+        ))
+      )}
+    </>
+  );
+}
+
+
+const SIGN = ["Sukoonify", "Memora", "Performance platform", "RAG chatbot", "Brain-X"];
+const SIGN_SHORT = ["Sukoonify", "Memora", "PMS", "RAG bot", "Brain-X"];
+
+/** Island IV: a hut per project, its name on a wooden sign, its details beneath. */
+function Village({ mobile, huts }: { mobile: boolean; huts: { x: number; y: number; s: number }[] }) {
+  if (!huts.length) return null;
+  const Card = ({ k, title }: { k: number; title?: boolean }) => {
+    const p = projects[k];
+    return (
+      <div className="intern-card rounded-md bg-[#06201c]/85 p-5 text-white ring-1 ring-white/20 backdrop-blur-xl" style={{ "--d": `${1.2 + k * 0.15}s` } as CSSProperties}>
+        <div className="flex flex-wrap items-center gap-2">
+          {title && <h3 className="font-display text-2xl leading-tight">{p.name}</h3>}
+          <span className="text-xs text-white/55">{p.year}</span>
+          {p.tag && <span className="rounded-sm bg-gold px-2 py-0.5 text-[10px] font-semibold text-[#1a1206]">{p.tag}</span>}
+        </div>
+        <p className="mt-1.5 text-[14.5px] leading-snug text-white/90">{p.blurb}</p>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {p.stack.map((c) => (
+            <span key={c} className="rounded-sm bg-white/10 px-2.5 py-0.5 text-[12px] text-white/85 ring-1 ring-white/15">
+              {c}
+            </span>
+          ))}
+        </div>
+        <a href={profile.github} target="_blank" rel="noreferrer" className="mt-2.5 inline-block text-[13px] font-medium text-gold underline decoration-gold/40 underline-offset-2">
+          See it on GitHub →
+        </a>
+      </div>
+    );
+  };
+  const width = "min(300px, 18.6vw)";
+  return (
+    <>
+      {huts.map((h, k) => (
+        <div
+          key={k}
+          className={`hut-sign ${k === 0 ? "hut-sign-big" : ""}`}
+          style={{ left: h.x, top: mobile ? h.y + 12 : h.y - 23 * h.s, "--d": `${0.8 + k * 0.12}s` } as CSSProperties}
+        >
+          {mobile ? SIGN_SHORT[k] : SIGN[k]}
+        </div>
+      ))}
+      {mobile ? (
+        <div className="absolute inset-x-3 bottom-[78px] z-10 space-y-3 overflow-y-auto overscroll-contain pb-2" style={{ top: Math.max(...huts.map((h) => h.y)) + 40 }}>
+          {projects.map((_, k) => (
+            <Card key={k} k={k} title />
+          ))}
+        </div>
+      ) : (
+        huts.map((h, k) => (
+          <div
+            key={k}
+            className="summit-card-wrap absolute z-10 overflow-y-auto overscroll-contain rounded-md"
+            style={{ width, left: `clamp(12px, calc(${h.x}px - ${width} / 2), calc(100% - ${width} - 12px))`, top: h.y + 16, maxHeight: `calc(100% - ${h.y + 16}px - 90px)` }}
+          >
+            <Card k={k} />
           </div>
         ))
       )}

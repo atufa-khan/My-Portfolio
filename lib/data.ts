@@ -92,6 +92,14 @@ export const publications = [
     status: "Under Review",
     kind: "Book Chapter",
   },
+  {
+    title:
+      "Security and Privacy in Digital Mental Health Service Facilitation Platforms: A Systematic Literature Review of Threats, Protection Mechanisms, and Student Wellbeing Applications",
+    venue: "",
+    date: "",
+    status: "In progress",
+    kind: "Systematic literature review",
+  },
 ];
 
 export const projects = [

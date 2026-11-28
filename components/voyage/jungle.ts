@@ -22,11 +22,12 @@ function rng(seed: number) {
 export type Env = { tod: number; night: number; warm: number };
 
 /** Where the trail runs, in 0–1 screen coordinates. Shared with the HTML markers. */
-/** The two summits of the Current, in 0–1 screen coordinates. */
-export function twinPeaks(mobile: boolean) {
-  const y = trailLayout(3, mobile, 1).peakY;
-  const dx = 0.5 * (mobile ? 0.62 : 0.4);
-  return [{ x: 0.5 - dx, y }, { x: 0.5 + dx, y }];
+/** The summits of the islands that use several peaks (II: internships, III: papers), in 0–1 screen coordinates. */
+export function multiPeaks(mobile: boolean, island: number) {
+  const y = trailLayout(3, mobile, island).peakY;
+  const f = mobile ? (island === 2 ? 0.5 : 0.62) : 0.4;
+  const at = (u: number, h: number) => ({ x: 0.5 + u * f, y: 0.66 - (0.66 - y) * h });
+  return island === 1 ? [at(-0.5, 1), at(0.5, 1)] : [at(-0.7, 0.93), at(0, 1), at(0.7, 0.93)];
 }
 
 /** How high each island's peak rises (screen fraction from the top), I → VII. */
@@ -58,7 +59,8 @@ const SHAPES: Record<IslandKind, [number, number, number][]> = {
   shallows: [[0, 0.42, 1], [-0.62, 0.34, 0.62], [0.58, 0.3, 0.5]],
   // two peaks side by side: one for each internship
   arches: [[-0.5, 0.2, 1], [0.5, 0.2, 1], [0, 0.42, 0.42], [-1.1, 0.25, 0.35], [1.1, 0.25, 0.3]],
-  reef: [[0, 0.22, 1], [-0.42, 0.3, 0.58], [0.5, 0.24, 0.46]],
+  // three peaks: accepted, under review, in progress
+  reef: [[-0.7, 0.15, 0.93], [0, 0.17, 1], [0.7, 0.15, 0.93], [-0.35, 0.3, 0.45], [0.35, 0.3, 0.45], [-1.2, 0.25, 0.3]],
   village: [[0, 0.2, 1], [0, 0.62, 0.62], [0.36, 0.11, 0.74], [-0.62, 0.22, 0.4], [1.05, 0.3, 0.22]],
   summit: [[0, 0.13, 1], [0, 0.5, 0.5], [-0.46, 0.2, 0.36], [0.42, 0.17, 0.32]],
   fire: [[0, 0.36, 1], [-0.58, 0.3, 0.62], [0.62, 0.34, 0.5]],
@@ -85,6 +87,9 @@ export class JungleScene {
   private palms: Palm[] = [];
   private clouds: Cloud[] = [];
   private huts: { x: number; y: number; s: number }[] = [];
+  /** Village huts in screen pixels, one per project, so the page can hang signs on them. */
+  hutAnchors: { x: number; y: number; s: number }[] = [];
+  onLayout?: () => void;
   private motes: { x: number; y: number; r: number; ph: number; sp: number }[] = [];
   private mx = 0;
   private my = 0;
@@ -138,7 +143,7 @@ export class JungleScene {
     const cx = W * 0.5;
     const peak = this.peakTop();
     const base = H * 0.66;
-    const u = (x - cx) / (W * (this.mobile ? 0.62 : 0.4));
+    const u = (x - cx) / (W * (this.mobile ? (this.kind === "reef" ? 0.5 : 0.62) : 0.4));
     const bumps = SHAPES[this.kind];
     let h = 0;
     for (const [c, w, a] of bumps) h = Math.max(h, a * Math.exp(-Math.pow((u - c) / w, 2)));
@@ -719,14 +724,35 @@ export class JungleScene {
 
     // huts on the beach
     this.huts = [];
-    const hutXs = this.kind === "village" ? [0.27, 0.36, 0.45, 0.58, 0.8] : this.kind === "dock" || this.kind === "fire" ? [0.3, 0.42, 0.78] : [0.33, 0.44];
-    for (const u of hutXs) {
-      const x = W * u;
-      const y = this.treeLineY(x) + (this.mobile ? 14 : 20) * s;
-      this.huts.push({ x, y, s: s * (this.mobile ? 1.1 : 1.45) * (0.85 + 0.3 * (1 - Math.abs(u - 0.45))) });
+    this.hutAnchors = [];
+    if (this.kind === "village") {
+      // one hut per project: Sukoonify in the middle and biggest, then Memora, PMS, RAG chatbot, Brain-X
+      const xs = this.mobile ? [0.5, 0.3, 0.7, 0.1, 0.9] : [0.5, 0.305, 0.695, 0.11, 0.89];
+      xs.forEach((u, k) => {
+        const x = W * u;
+        const y = H * (this.mobile ? (k === 0 ? 0.47 : 0.45) : k === 0 ? 0.6 : 0.57);
+        const sc = s * (this.mobile ? (k === 0 ? 1.3 : 0.95) : k === 0 ? 2.5 : 1.8);
+        this.hutAnchors[k] = { x, y, s: sc };
+        this.huts.push({ x, y, s: sc });
+      });
+    } else {
+      const hutXs = this.kind === "dock" || this.kind === "fire" ? [0.3, 0.42, 0.78] : [0.33, 0.44];
+      for (const u of hutXs) {
+        const x = W * u;
+        const y = this.treeLineY(x) + (this.mobile ? 14 : 20) * s;
+        this.huts.push({ x, y, s: s * (this.mobile ? 1.1 : 1.45) * (0.85 + 0.3 * (1 - Math.abs(u - 0.45))) });
+      }
     }
     this.huts.sort((a, b) => a.y - b.y);
-    for (const h of this.huts) this.hut(g, h.x, h.y, h.s);
+    for (const h of this.huts) {
+      if (this.kind === "village") {
+        g.fillStyle = "rgba(0,20,10,0.3)";
+        g.beginPath();
+        g.ellipse(h.x, h.y + 2 * h.s, 34 * h.s, 5 * h.s, 0, 0, TAU);
+        g.fill();
+      }
+      this.hut(g, h.x, h.y, h.s);
+    }
     if (this.kind === "fire") {
       const fx = W * 0.62, fy = this.treeLineY(W * 0.62) + 36 * s;
       g.fillStyle = this.c("#5a4030", "#0c0f10");
@@ -754,6 +780,7 @@ export class JungleScene {
     this.palms = [];
     const palmXs = this.mobile ? [0.05, 0.36, 0.72, 0.95] : [0.04, 0.2, 0.36, 0.5, 0.68, 0.78, 0.96];
     for (const u of palmXs) {
+      if (this.kind === "village" && this.hutAnchors.some((h) => Math.abs(h.x / W - u) < 0.06)) continue;
       const x = W * (u + (rp() - 0.5) * 0.03);
       this.palms.push({ x, y: this.treeLineY(x) + (12 + rp() * 22) * s, h: (130 + rp() * 90) * s, lean: (u < 0.5 ? -1 : 1) * (25 + rp() * 35) * s, s, ph: rp() * TAU });
     }
@@ -768,6 +795,7 @@ export class JungleScene {
     });
     this.motes = Array.from({ length: 50 }, () => ({ x: rp(), y: 0.3 + rp() * 0.65, r: 0.8 + rp() * 1.6, ph: rp() * TAU, sp: 0.2 + rp() * 0.6 }));
     this.layer = c;
+    this.onLayout?.();
   }
 
 
@@ -854,8 +882,9 @@ export class JungleScene {
     this.sm.y += (this.my - this.sm.y) * 0.04;
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     // the painted layer, drifting very slightly with the cursor
-    const ox = -30 - this.sm.x * 14;
-    const oy = -30 - this.sm.y * 8;
+    const still = this.kind === "village" ? 0 : 1;
+    const ox = -30 - this.sm.x * 14 * still;
+    const oy = -30 - this.sm.y * 8 * still;
     g.drawImage(this.layer, ox, oy, W + 60, H + 60);
     g.save();
     g.translate(ox + 30, oy + 30);
